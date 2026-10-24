@@ -13,7 +13,8 @@ const CHIP = {
   req: ['!', 'Required', 'req']
 };
 const chip = (k, label) => `<span class="chip ${CHIP[k][2]}"><i aria-hidden="true">${CHIP[k][0]}</i>${esc(label || CHIP[k][1])}</span>`;
-const flagChip = f => f === 'illustrative' ? chip('illus') : f === 'needs-confirmation' ? chip('conf') : '';
+const flagChip = f => f === 'illustrative' ? chip('illus') : f === 'illustrative-config' ? chip('illus', 'Illustrative configuration') : f === 'needs-confirmation' ? chip('conf') : '';
+const FLAG_TEXT = { 'illustrative': 'Illustrative', 'illustrative-config': 'Illustrative configuration (host, CPU and core counts not edited)', 'needs-confirmation': 'Needs confirmation' };
 
 const PLAT = { vmware: 'VMware', nutanix: 'Nutanix', hyperv: 'Hyper-V' };
 const val = v => v === null || v === undefined || (typeof v === 'number' && isNaN(v)) ? '' : v;
@@ -80,13 +81,25 @@ function renderDerived(R) {
   $('chip-rrate').innerHTML = S.rubrik.rate === null || !(S.rubrik.rate > 0) ? chip('req') : chip(S.rubrik.rateStatus === 'illustrative' ? 'illus' : 'entered');
   $('chip-metric').innerHTML = !S.rubrik.metric ? chip('req') : S.rubrik.metricConfirmed ? chip('entered', 'Confirmed by you') : chip('conf');
   const p = R.platform;
-  $('derived-platform').innerHTML = p ? `Physical cores <b>${fmtN(p.physicalCores, 0)}</b> &rarr; licensable <b>${fmtN(p.licensableCores, 0)}</b>${p.floorAdds > 0 ? ` <span class="adds">(+${fmtN(p.floorAdds, 0)} from the platform floor)</span>` : ''}<br>${esc(p.floorNote)}` : 'Fix the highlighted platform inputs to see licensable cores.';
+  const cfg = S.configStatus === 'illustrative' ? chip('illus', 'Illustrative sample configuration') : chip('entered', 'Configuration entered by you');
+  $('derived-platform').innerHTML = p ? `Physical cores <b>${fmtN(p.physicalCores, 0)}</b> &rarr; licensable <b>${fmtN(p.licensableCores, 0)}</b>${p.floorAdds > 0 ? ` <span class="adds">(+${fmtN(p.floorAdds, 0)} from the platform floor)</span>` : ''}<br>${esc(p.floorNote)}<div class="cfgrow">${cfg}</div>` : 'Fix the highlighted platform inputs to see licensable cores.';
   const q = R.rubrik;
-  $('derived-rubrik').innerHTML = q && q.qty !== null ? `Modeled quantity <b>${fmtN(q.qty, 2)} ${q.qtyUnit}</b>${S.rubrik.metricConfirmed ? '' : '<br>Not a billing figure until your order confirms the metric and how capacity is counted.'}` : 'Choose a metric and enter protected capacity to see the modeled quantity.';
+  $('derived-rubrik').innerHTML = rubrikDerived(R);
   const errs = R.errors;
   $('errs').hidden = errs.length === 0; $('errs').innerHTML = errs.length ? '<ul>' + errs.map(e => `<li>${esc(e.msg)}</li>`).join('') + '</ul>' : '';
   document.querySelectorAll('.field.invalid').forEach(f => f.classList.remove('invalid'));
   errs.forEach(e => { const f = $('fld-' + e.field); if (f) f.classList.add('invalid'); });
+}
+
+function rubrikDerived(R) {
+  const r = S.rubrik, q = R.rubrik;
+  const prov = r.metric && !r.metricConfirmed ? '<br><b class="prov">Provisional:</b> the metric is not confirmed in your order, so this is not a billing figure.' : '';
+  if (!r.metric) return 'Choose a metric and enter protected capacity to see the modeled quantity.';
+  if (r.metric === 'FETB') {
+    return (q && q.qty !== null ? `Your rate applies to the protected front-end capacity: modeled quantity <b>${fmtN(q.qty, 2)} FETB</b>.` : 'Your rate applies to the protected front-end capacity. Enter that capacity to see the modeled quantity.') + prov;
+  }
+  if (!(r.reductionRatio > 0)) return 'Your rate applies to modeled back-end capacity, which is front-end capacity divided by a reduction ratio. <b>Enter a reduction ratio to calculate it.</b> The ratio is your assumption, not a Rubrik figure.' + prov;
+  return (q && q.qty !== null ? `Your rate applies to modeled back-end capacity: ${fmtN(r.frontEndTB, 2)} TB front-end &divide; ${fmtN(r.reductionRatio, 2)} = <b>${fmtN(q.qty, 2)} BETB</b>.` : 'Enter protected front-end capacity to see the modeled back-end quantity.') + '<br>The ratio is your assumption, not a Rubrik figure.' + prov;
 }
 
 function bridgeHTML(R) {
@@ -119,12 +132,13 @@ function renderResults(R) {
   const t = R.total, p = R.platform, q = R.rubrik;
   let head;
   const fl = t.flags.map(flagChip).join('');
-  if (t.kind === 'complete') head = `<div class="total complete"><div class="tl">Annualized stack total</div><div class="tv">${fmt(t.amount)}</div><div class="ts">Platform plus Rubrik, per year. Excludes the items listed below.</div><div class="chips">${fl}</div></div>`;
+  const prov = t.flags.includes('needs-confirmation');
+  if (t.kind === 'complete') head = `<div class="total complete ${prov ? 'prov' : ''}"><div class="tl">Annualized stack total${prov ? ', provisional' : ''}</div><div class="tv">${fmt(t.amount)}</div><div class="ts">Platform plus Rubrik, per year. Excludes the items listed below.${prov ? ' Provisional: the Rubrik metric is not confirmed in your order.' : ''}</div><div class="chips">${fl}</div></div>`;
   else if (t.kind === 'incomplete') head = `<div class="total empty"><div class="tl">No total yet</div><div class="tv">Enter your rates to begin.</div><div class="ts">Each model needs its own inputs. A missing value is never counted as zero. <button type="button" class="link-btn" data-act="example">Load illustrative example</button></div></div>`;
   else {
     const which = t.kind === 'partial-platform' ? 'platform only' : 'Rubrik only';
     const need = t.kind === 'partial-platform' ? (q ? q.missing : ['Rubrik inputs']) : (p ? p.missing : ['platform inputs']);
-    head = `<div class="total partial"><div class="tl">Partial total: ${which}</div><div class="tv">${fmt(t.amount)}</div><div class="ts">${t.kind === 'partial-platform' ? 'Rubrik' : 'Platform'} is not included. Still needed: ${esc(need.join(', '))}.</div><div class="chips">${fl}</div></div>`;
+    head = `<div class="total partial"><div class="tl">Partial total: ${which}${prov ? ', provisional' : ''}</div><div class="tv">${fmt(t.amount)}</div><div class="ts">${t.kind === 'partial-platform' ? 'Rubrik' : 'Platform'} is not included. Still needed: ${esc(need.join(', '))}.</div><div class="chips">${fl}</div></div>`;
   }
   let pl = '';
   if (p) {
@@ -146,19 +160,20 @@ function renderResults(R) {
   $('rp').querySelectorAll('[data-w]').forEach(el => { el.style.width = el.dataset.w + '%'; });
   const summary = t.kind === 'incomplete' ? 'No total yet' : (t.kind === 'complete' ? 'Annualized stack total ' : 'Partial total ') + fmt(t.amount);
   $('mbar-amt').textContent = t.amount === null ? 'No total yet' : fmt(t.amount);
-  $('mbar-st').textContent = t.kind === 'complete' ? 'Annualized' : t.kind === 'incomplete' ? 'Enter rates' : 'Partial';
+  $('mbar-st').textContent = t.kind === 'complete' ? (prov ? 'Provisional' : 'Annualized') : t.kind === 'incomplete' ? 'Enter rates' : 'Partial';
   $('live').textContent = summary;
 }
 
-function statusText(flags, missing) { return missing && missing.length ? 'Required: ' + missing.join(', ') : (flags.length ? flags.map(f => f === 'illustrative' ? 'Illustrative' : 'Needs confirmation').join('; ') : 'Entered by you'); }
+function statusText(flags, missing) { return missing && missing.length ? 'Required: ' + missing.join(', ') : (flags.length ? flags.map(f => FLAG_TEXT[f] || f).join('; ') : 'Entered by you'); }
 
 function summaryText(R) {
   const t = R.total, p = R.platform, q = R.rubrik, r = S.rubrik, L = [];
   L.push('Rubrik Virtual Stack TCO Calculator (rack2cloud.com)');
+  if (t.flags.includes('needs-confirmation')) L.push('PROVISIONAL: the Rubrik licensing metric is not confirmed in the order.');
   L.push((t.kind === 'complete' ? 'Annualized stack total: ' : t.kind === 'incomplete' ? 'No total yet' : 'Partial total (' + (t.kind === 'partial-platform' ? 'platform only' : 'Rubrik only') + '): ') + (t.amount === null ? '' : fmt(t.amount)));
-  if (p) L.push(`Platform: ${p.label}; ${S.hosts} hosts x ${S.cpusPerHost} CPUs x ${S.coresPerCpu} cores; ${fmtN(p.licensableCores, 0)} licensable cores; ${p.annual === null ? 'no figure yet' : fmt(p.annual) + ' per year' + (p.kind === 'amortized-perpetual' ? ` (one-time ${fmt(p.perpetualTotal)} amortized over ${p.amortYears} years)` : '')} [${statusText(p.flags, p.missing)}]`);
+  if (p) L.push(`Platform: ${p.label}; ${S.hosts} hosts x ${S.cpusPerHost} CPUs x ${S.coresPerCpu} cores (${S.configStatus === 'illustrative' ? 'illustrative sample configuration' : 'entered by you'}); rate ${p.rate === null ? 'not entered' : fmtN(p.rate, 2) + (S.platform === 'hyperv' ? ' per 16-core pack, one-time' : ' per core per year')}; ${fmtN(p.licensableCores, 0)} licensable cores; ${p.annual === null ? 'no figure yet' : fmt(p.annual) + ' per year' + (p.kind === 'amortized-perpetual' ? ` (one-time ${fmt(p.perpetualTotal)} amortized over ${p.amortYears} years)` : '')} [${statusText(p.flags, p.missing)}]`);
   if (q) L.push(`Rubrik: metric ${r.metric || 'not chosen'}; protected front-end ${r.frontEndTB === null ? 'not entered' : r.frontEndTB + ' TB'}${r.metric === 'BETB' && r.reductionRatio ? '; modeled reduction ratio ' + r.reductionRatio + ':1' : ''}; modeled quantity ${q.qty === null ? 'n/a' : fmtN(q.qty, 2) + ' ' + q.qtyUnit}; ${q.annual === null ? 'no figure yet' : fmt(q.annual) + ' per year at ' + r.rate + ' ' + RATE_UNITS[r.rateUnit]} [${statusText(q.flags, q.missing)}]`);
-  L.push('Status key: Entered by you = your value; Illustrative = sample value, not a price; Needs confirmation = metric not confirmed in your order; Required = a missing value blocks the figure.');
+  L.push('Status key: Entered by you = your value; Illustrative = sample value, not a price; Illustrative configuration = host, CPU and core counts left at the sample values; Needs confirmation = metric not confirmed in your order; Required = a missing value blocks the figure.');
   L.push('Excludes: ' + EXCLUSIONS.join('; ') + '.');
   L.push('Rates are user-supplied. This is a calculation, not a quote.');
   return L.join('\n');
@@ -167,11 +182,11 @@ function summaryText(R) {
 function printReport(R) {
   const t = R.total, p = R.platform, q = R.rubrik, r = S.rubrik;
   const row = (a, b) => `<tr><th>${esc(a)}</th><td>${b}</td></tr>`;
-  $('print-report').innerHTML = `<h1><img class="rpt-logo" src="assets/r2c-icon.svg" alt="">Rubrik Virtual Stack TCO Calculator</h1><div>rack2cloud.com</div>
-  <section><h2>Result</h2><div class="big">${t.amount === null ? 'No total yet' : fmt(t.amount)}</div><div>${t.kind === 'complete' ? 'Annualized stack total (platform plus Rubrik, per year)' : t.kind === 'incomplete' ? 'Inputs are incomplete. No figure is shown.' : 'Partial total: ' + (t.kind === 'partial-platform' ? 'platform only; Rubrik is not included' : 'Rubrik only; platform is not included')}</div></section>
-  <section><h2>Platform</h2><table>${p ? row('Platform', esc(p.label)) + row('Hosts, CPUs, cores', `${S.hosts} x ${S.cpusPerHost} x ${S.coresPerCpu}`) + row('Licensable cores', fmtN(p.licensableCores, 0) + ' (physical ' + fmtN(p.physicalCores, 0) + ')') + row('Rate', p.rate === null ? 'not entered' : fmtN(p.rate, 2) + (S.platform === 'hyperv' ? ' per 16-core pack, one-time' : ' per core per year')) + (p.perpetualTotal !== null ? row('One-time total', fmt(p.perpetualTotal) + ', amortized over ' + p.amortYears + ' years') : '') + row('Annual', p.annual === null ? 'no figure yet' : fmt(p.annual)) + row('Status', esc(statusText(p.flags, p.missing))) + row('Basis note', esc(p.floorNote)) : row('Platform', 'inputs need correction')}</table></section>
+  $('rpt-body').innerHTML = `<h1>Rubrik Virtual Stack TCO Calculator</h1><div>rack2cloud.com</div>
+  <section><h2>Result</h2>${t.flags.includes('needs-confirmation') ? '<div><b>PROVISIONAL:</b> the Rubrik licensing metric is not confirmed in the order.</div>' : ''}<div class="big">${t.amount === null ? 'No total yet' : fmt(t.amount)}</div><div>${t.kind === 'complete' ? 'Annualized stack total (platform plus Rubrik, per year)' : t.kind === 'incomplete' ? 'Inputs are incomplete. No figure is shown.' : 'Partial total: ' + (t.kind === 'partial-platform' ? 'platform only; Rubrik is not included' : 'Rubrik only; platform is not included')}</div></section>
+  <section><h2>Platform</h2><table>${p ? row('Platform', esc(p.label)) + row('Hosts, CPUs, cores', `${S.hosts} x ${S.cpusPerHost} x ${S.coresPerCpu} (${S.configStatus === 'illustrative' ? 'illustrative sample configuration' : 'entered by you'})`) + row('Licensable cores', fmtN(p.licensableCores, 0) + ' (physical ' + fmtN(p.physicalCores, 0) + ')') + row('Rate', p.rate === null ? 'not entered' : fmtN(p.rate, 2) + (S.platform === 'hyperv' ? ' per 16-core pack, one-time' : ' per core per year')) + (p.perpetualTotal !== null ? row('One-time total', fmt(p.perpetualTotal) + ', amortized over ' + p.amortYears + ' years') : '') + row('Annual', p.annual === null ? 'no figure yet' : fmt(p.annual)) + row('Status', esc(statusText(p.flags, p.missing))) + row('Basis note', esc(p.floorNote)) : row('Platform', 'inputs need correction')}</table></section>
   <section><h2>Rubrik protection</h2><table>${q ? row('Metric', esc(r.metric || 'not chosen') + (r.metricConfirmed ? ' (confirmed by you in your order)' : ' (not confirmed)')) + row('Protected front-end', r.frontEndTB === null ? 'not entered' : r.frontEndTB + ' TB') + (r.metric === 'BETB' ? row('Modeled reduction ratio', r.reductionRatio ? r.reductionRatio + ':1 (an assumption, not a contract term)' : 'not entered') : '') + row('Modeled quantity', q.qty === null ? 'n/a' : fmtN(q.qty, 2) + ' ' + q.qtyUnit) + row('Rate', r.rate === null ? 'not entered' : r.rate + ' ' + RATE_UNITS[r.rateUnit]) + row('Annual', q.annual === null ? 'no figure yet' : fmt(q.annual)) + row('Status', esc(statusText(q.flags, q.missing))) : row('Rubrik', 'inputs need correction')}</table></section>
-  <section><h2>Status key</h2><ul><li>Entered by you: a value you supplied.</li><li>Illustrative: a sample value, not a price.</li><li>Needs confirmation: the metric is not confirmed in your order.</li><li>Required: a missing value blocks the figure.</li></ul></section>
+  <section><h2>Status key</h2><ul><li>Entered by you: a value you supplied.</li><li>Illustrative: a sample value, not a price. Illustrative configuration: host, CPU and core counts left at the sample values.</li><li>Needs confirmation: the metric is not confirmed in your order.</li><li>Required: a missing value blocks the figure.</li></ul></section>
   <section><h2>Excluded from this estimate</h2><ul>${EXCLUSIONS.map(e => `<li>${esc(e)}</li>`).join('')}</ul></section>
   <section><h2>Basis</h2><p>Rates are the ones you entered. This is a calculation, not a quote. Rubrik licensing terms referenced: ${esc(GUIDE)}.</p></section>`;
 }
@@ -183,9 +198,9 @@ function keepFocus(sel) { const el = document.querySelector(sel); if (el) el.foc
 document.addEventListener('input', e => {
   const id = e.target.id;
   if (!id || !id.startsWith('f-')) return;
-  if (id === 'f-hosts') S.hosts = readStruct(e.target);
-  else if (id === 'f-cpus') S.cpusPerHost = readStruct(e.target);
-  else if (id === 'f-cores') S.coresPerCpu = readStruct(e.target);
+  if (id === 'f-hosts') { S.hosts = readStruct(e.target); S.configStatus = 'entered'; }
+  else if (id === 'f-cpus') { S.cpusPerHost = readStruct(e.target); S.configStatus = 'entered'; }
+  else if (id === 'f-cores') { S.coresPerCpu = readStruct(e.target); S.configStatus = 'entered'; }
   else if (id === 'f-rate') setRate(read(e.target));
   else if (id === 'f-amort') { S.amortYears = readStruct(e.target); S.amortStatus = 'entered'; }
   else if (id === 'f-fetb') S.rubrik.frontEndTB = read(e.target);
@@ -197,7 +212,8 @@ document.addEventListener('input', e => {
   recalc();
 });
 
-function structural() { return { platform: S.platform, hosts: S.hosts, cpusPerHost: S.cpusPerHost, coresPerCpu: S.coresPerCpu, vmwareEdition: S.vmwareEdition, nutanixTier: S.nutanixTier }; }
+// Platform configuration survives Load example and Clear: only rates and Rubrik inputs are reset.
+function structural() { return { platform: S.platform, hosts: S.hosts, cpusPerHost: S.cpusPerHost, coresPerCpu: S.coresPerCpu, vmwareEdition: S.vmwareEdition, nutanixTier: S.nutanixTier, configStatus: S.configStatus, amortYears: S.amortYears, amortStatus: S.amortStatus }; }
 
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
@@ -213,9 +229,17 @@ document.addEventListener('click', async e => {
     try { await navigator.clipboard.writeText(txt); b.textContent = '✓ Copied'; } catch (_) { b.textContent = 'Copy blocked by browser'; }
     setTimeout(() => { const c = $('btn-copy'); if (c) c.textContent = 'Copy results'; }, 2000);
   }
-  else if (act === 'print') { printReport(lastResult); window.print(); }
+  else if (act === 'print') {
+    printReport(lastResult);
+    // The logo is in the DOM from page load; wait for it to decode so the print preview never shows an empty block.
+    const im = document.querySelector('#print-report .rpt-logo');
+    await Promise.race([im && im.decode ? im.decode().catch(() => {}) : Promise.resolve(), new Promise(r => setTimeout(r, 1500))]);
+    window.print();
+  }
 });
 $('mbar').addEventListener('click', () => { $('results').scrollIntoView(); $('results').focus(); });
+// Hide the mobile bar while the full result is on screen, so it never covers the result it summarizes.
+if ('IntersectionObserver' in window) new IntersectionObserver(en => { $('mbar').classList.toggle('hide', en[0].isIntersecting); }, { threshold: 0.15 }).observe($('results'));
 
 renderForm();
 recalc();

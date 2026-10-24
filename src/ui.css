@@ -51,7 +51,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .app { padding: 0 5% 60px; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 460px); gap: 24px; align-items: start; }
 .inputs { min-width: 0; }
-.results-panel { position: sticky; top: 76px; max-height: calc(100vh - 92px); overflow: auto; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 20px; }
+.results-panel { position: static; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 20px; }
+/* No inner scrolling. The panel stays pinned only when the whole panel fits the viewport. */
+@media (min-width: 961px) and (min-height: 940px) { .results-panel { position: sticky; top: 76px; } }
+html { scroll-padding-top: 76px; scroll-padding-bottom: 76px; }
+.cfgrow { margin-top: 8px; }
+.prov { color: var(--amber); }
+.total.prov { border: 2px dashed var(--amber); }
 
 .section-label { font-family: var(--mono); font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: var(--green); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
 .section-label::before { content: '>_'; color: var(--faint); }
@@ -140,7 +146,7 @@ details.excl ul { margin: 8px 0 0 18px; color: var(--muted); font-size: 0.78rem;
 .r2c-btn:hover, .action-btn:hover { background: var(--green); color: var(--bg); }
 .action-btn.secondary { border-color: var(--border2); color: var(--muted); }
 .action-btn.secondary:hover { background: var(--surface2); color: var(--text); }
-.action-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px; position: sticky; bottom: -20px; background: var(--surface); padding: 10px 0 20px; z-index: 1; }
+.action-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px; }
 
 /* CTA + footer */
 .cta-block { background: linear-gradient(135deg, #0f172a 0%, #111a2e 100%); border: 1px solid #1e293b; border-left: 5px solid var(--green); border-radius: 8px; padding: 32px; margin: 48px 0 24px; }
@@ -161,11 +167,12 @@ details.excl ul { margin: 8px 0 0 18px; color: var(--muted); font-size: 0.78rem;
 @media (max-width: 960px) {
   .layout { grid-template-columns: 1fr; }
   .results-panel { position: static; max-height: none; overflow: visible; }
-  .action-row { position: static; padding: 0; margin: 12px 0 4px; }
   .mbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; padding: 8px 16px; background: var(--surface); border: 0; border-top: 1px solid var(--green); cursor: pointer; text-align: left; }
   .mbar .m-amt { font-family: var(--mono); font-weight: 800; font-size: 1.05rem; }
   .mbar .m-st { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-  .app { padding-bottom: 96px; }
+  .mbar.hide { display: none; }
+  .app { padding-bottom: 24px; }
+  .tool-footer { padding-bottom: 76px; }
 }
 @media (max-width: 640px) {
   .grid3, .grid2, .cta-cols, .inline { grid-template-columns: 1fr; }
@@ -188,9 +195,10 @@ details.excl ul { margin: 8px 0 0 18px; color: var(--muted); font-size: 0.78rem;
   #print-report h1 { font-size: 16px; margin: 0 0 4px; }
   #print-report h2 { font-size: 13px; margin: 14px 0 4px; break-after: avoid; }
   #print-report table { border-collapse: collapse; width: 100%; break-inside: avoid; }
+  #print-report th { width: 26%; }
   #print-report td, #print-report th { padding: 3px 6px; border-bottom: 1px solid #ccc; text-align: left; vertical-align: top; }
   #print-report .big { font-size: 20px; font-weight: 700; margin: 4px 0; }
-  #print-report .rpt-logo { width: 28px; height: 28px; vertical-align: middle; margin-right: 8px; }
+  #print-report .rpt-logo { display: block; width: 340px; max-width: 70%; height: auto; margin: 0 0 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   #print-report ul { margin: 4px 0 0 16px; }
   #print-report .tag { border: 1px solid #555; padding: 0 4px; font-size: 9px; }
   #print-report section { break-inside: avoid; }

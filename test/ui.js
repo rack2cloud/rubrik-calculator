@@ -79,6 +79,53 @@ let n = 0; const ok = (c, m, d) => { if (!c) { console.log('FAIL ' + m + (d ? ' 
   await mp.screenshot({ path: path.join(shots, 'mobile.png'), fullPage: true });
   const tab = await br.newContext({ viewport: { width: 820, height: 900 } }); const tp = await tab.newPage(); await tp.goto(s.url); const tw = await tp.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth); ok(tw, 'tablet width: no horizontal scroll');
 
+  // ---- review round: provenance, provisional state, scrolling, report, logo ----
+  const np = await ctx.newPage(); await np.goto(s.url); await np.waitForSelector('#rp .total');
+  const T = sel => np.textContent(sel);
+  ok(/Illustrative sample configuration/.test(await T('#derived-platform')), 'platform: sample host/CPU/core counts are labeled illustrative until edited');
+  await np.click('#form [data-act=example]');
+  ok(/provisional/i.test(await T('#rp .total .tl')) && /not confirmed in your order/.test(await T('#rp .total .ts')), 'unconfirmed metric: the total is labeled provisional');
+  ok(/Illustrative configuration/.test(await T('#rp .total .chips')), 'the total carries the illustrative-configuration status');
+  ok(/rate applies to the protected front-end capacity/i.test(await T('#derived-rubrik')) && /Provisional/.test(await T('#derived-rubrik')), 'FETB: says which quantity the rate applies to, and that it is provisional');
+  await np.check('#f-confirm');
+  ok(!/provisional/i.test(await T('#rp .total .tl')) && !/Provisional/.test(await T('#derived-rubrik')), 'confirming the metric removes the provisional state');
+  await np.click('[data-act=metric][data-v=BETB]');
+  ok(/Enter a reduction ratio/.test(await T('#derived-rubrik')) && /assumption, not a Rubrik figure/.test(await T('#derived-rubrik')), 'BETB without a ratio: requires one and calls it an assumption');
+  await np.fill('#f-ratio', '3'); await np.fill('#f-fetb', '30');
+  ok(/10 BETB/.test(await T('#derived-rubrik')) && /assumption, not a Rubrik figure/.test(await T('#derived-rubrik')), 'BETB with a ratio: shows the division and labels the ratio an assumption');
+  // no inner scrolling at desktop widths, with the tallest state loaded
+  const sc = await np.evaluate(() => { const r = document.getElementById('results'), cs = getComputedStyle(r); return { ov: cs.overflowY, fits: r.scrollHeight <= r.clientHeight + 1 }; });
+  ok(sc.ov === 'visible' && sc.fits, 'results panel has no internal scrollbar', sc);
+  await np.setViewportSize({ width: 1440, height: 700 });
+  const sc2 = await np.evaluate(() => getComputedStyle(document.getElementById('results')).position);
+  ok(sc2 === 'static', 'short viewport: panel is not pinned, so nothing can be cut off', sc2);
+  await np.setViewportSize({ width: 1440, height: 1000 });
+  // platform edit marks configuration as entered; Clear keeps platform configuration
+  await np.fill('#f-hosts', '5');
+  ok(/Configuration entered by you/.test(await T('#derived-platform')), 'editing hosts marks the configuration as entered');
+  await np.fill('#f-rate', '100'); await np.click('#form [data-act=clear]');
+  ok(await np.inputValue('#f-hosts') === '5' && /Configuration entered by you/.test(await T('#derived-platform')), 'Clear keeps the platform configuration and its status');
+  ok(await np.inputValue('#f-rate') === '' && await np.inputValue('#f-fetb') === '' && await np.inputValue('#f-rrate') === '', 'Clear empties the platform rate and the Rubrik inputs');
+  // copy and print carry inputs, units, status and exclusions
+  await np.click('#form [data-act=example]'); await np.fill('#f-hosts', '4');
+  await np.click('[data-act=copy]'); const clip2 = await np.evaluate(() => navigator.clipboard.readText());
+  ok(/4 hosts x 2 CPUs x 16 cores \(entered by you\)/.test(clip2) && /per core per year/.test(clip2) && /per TB per year/.test(clip2) && /PROVISIONAL/.test(clip2) && /Excludes:/.test(clip2) && /Status key/.test(clip2), 'copied text carries inputs, rate units, provisional state, status key and exclusions', clip2);
+  await np.evaluate(() => { window.print = () => {}; });
+  await np.click('[data-act=print]');
+  await np.emulateMedia({ media: 'print' });
+  const pr = await np.evaluate(() => { const r = document.getElementById('print-report'), im = r.querySelector('.rpt-logo'), b = im.getBoundingClientRect(); return { text: r.innerText, logoLoaded: im.complete && im.naturalWidth > 0, logoW: Math.round(b.width), shown: getComputedStyle(r).display }; });
+  ok(pr.shown === 'block' && pr.logoLoaded && pr.logoW >= 200, 'print: the full logo is loaded and rendered at report size', pr);
+  ok(['Hosts, CPUs, cores', 'entered by you', 'per core per year', 'per TB per year', 'Status key', 'Excluded from this estimate', 'PROVISIONAL', 'Modeled quantity', 'not a quote'].every(k => pr.text.includes(k)), 'print: report holds inputs, units, statuses, exclusions and the provisional state', pr.text.slice(0, 400));
+  fs.mkdirSync(shots, { recursive: true }); await np.pdf({ path: path.join(shots, 'report.pdf'), format: 'Letter', printBackground: false });
+  await np.emulateMedia({ media: 'screen' });
+  // mobile: the bar never covers the end of the page and hides while the result is in view
+  await mp.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  const mg = await mp.evaluate(() => { const links = document.querySelectorAll('.tool-footer a'), f = links[links.length - 1].getBoundingClientRect(), b = document.getElementById('mbar'), br = b.getBoundingClientRect(); return { footerBottom: f.bottom, barTop: br.top, barShown: getComputedStyle(b).display !== 'none' }; });
+  ok(!mg.barShown || mg.footerBottom <= mg.barTop + 1, 'mobile: the bottom bar does not cover the end of the page', mg);
+  await mp.evaluate(() => document.getElementById('results').scrollIntoView()); await mp.waitForTimeout(250);
+  ok(await mp.evaluate(() => getComputedStyle(document.getElementById('mbar')).display) === 'none', 'mobile: the bar is hidden while the full result is on screen');
+  await np.close();
+
   const iconOk = await page.evaluate(() => { const i = document.querySelector('.brand-icon'); return i.complete && i.naturalWidth > 0; });
   ok(iconOk, 'header icon loads (naturalWidth > 0)');
   const selOk = await page.evaluate(() => { const s = document.querySelector('#f-runit'); return s ? s.scrollWidth <= s.clientWidth + 1 : true; });

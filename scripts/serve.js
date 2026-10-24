@@ -3,7 +3,7 @@
 const http = require('http'), fs = require('fs'), path = require('path');
 function serve(dir, port) {
   const hdr = JSON.parse(fs.readFileSync(path.join(dir, '..', '.build', 'headers.json'), 'utf8'));
-  const types = { '.html': 'text/html; charset=utf-8', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.json': 'application/json', '.txt': 'text/plain' };
+  const types = { '.html': 'text/html; charset=utf-8', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.json': 'application/json', '.txt': 'text/plain' };
   const log = [];
   const srv = http.createServer((req, res) => {
     const u = decodeURIComponent(req.url.split('?')[0]); log.push(req.method + ' ' + u);

@@ -41,6 +41,7 @@ const dist = path.join(root, 'dist'); fs.mkdirSync(path.join(dist, 'fonts'), { r
 fs.writeFileSync(path.join(dist, 'index.html'), html);
 for (const f of fs.readdirSync(path.join(root, 'fonts'))) if (f.endsWith('.woff2') || f.startsWith('LICENSE')) fs.copyFileSync(path.join(root, 'fonts', f), path.join(dist, 'fonts', f));
 fs.copyFileSync(path.join(root, 'assets', 'r2c-icon.svg'), path.join(dist, 'assets', 'r2c-icon.svg'));
+fs.copyFileSync(path.join(root, 'assets', 'r2c-logo.jpg'), path.join(dist, 'assets', 'r2c-logo.jpg'));
 const headers = { 'Content-Security-Policy': csp + "; frame-ancestors 'none'", 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'strict-origin-when-cross-origin' };
 fs.mkdirSync(path.join(root, '.build'), { recursive: true }); fs.writeFileSync(path.join(root, '.build', 'headers.json'), JSON.stringify(headers, null, 2));
 fs.writeFileSync(path.join(root, 'vercel.json'), JSON.stringify({ framework: null, installCommand: null, buildCommand: null, outputDirectory: 'dist', headers: [{ source: '/(.*)', headers: Object.entries(headers).map(([key, value]) => ({ key, value })) }] }, null, 2) + '\n');

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-xnGUYb+UbEjJPtKd0B4BDX/p41Ot25ub+IA4S4RVh/8='; style-src 'sha256-/Wet/HYkqDSL7WIT2DQNUnjU6spZ8U9inft7aZXtzKc='; connect-src 'none'; font-src 'self'; img-src 'self' data:; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-21De46vOC0dr0XTkd0a8luhpmCS0QclFY0IVAWQZ1Fs='; style-src 'sha256-tpiCI7e2vt7BHQBW1GnEMt9Q/I+aqqQLuhP6Yp3Tqto='; connect-src 'none'; font-src 'self'; img-src 'self' data:; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Rubrik Virtual Stack TCO Calculator | rack2cloud</title>
 <meta name="description" content="Rubrik Virtual Stack TCO Calculator: annualize VMware, Nutanix or Hyper-V licensing next to Rubrik protection cost, with every rate and assumption labelled.">
 <link rel="canonical" href="https://rvstc.rack2cloud.com/">
@@ -64,7 +64,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .app { padding: 0 5% 60px; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 460px); gap: 24px; align-items: start; }
 .inputs { min-width: 0; }
-.results-panel { position: sticky; top: 76px; max-height: calc(100vh - 92px); overflow: auto; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 20px; }
+.results-panel { position: static; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 20px; }
+/* No inner scrolling. The panel stays pinned only when the whole panel fits the viewport. */
+@media (min-width: 961px) and (min-height: 940px) { .results-panel { position: sticky; top: 76px; } }
+html { scroll-padding-top: 76px; scroll-padding-bottom: 76px; }
+.cfgrow { margin-top: 8px; }
+.prov { color: var(--amber); }
+.total.prov { border: 2px dashed var(--amber); }
 
 .section-label { font-family: var(--mono); font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: var(--green); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
 .section-label::before { content: '>_'; color: var(--faint); }
@@ -153,7 +159,7 @@ details.excl ul { margin: 8px 0 0 18px; color: var(--muted); font-size: 0.78rem;
 .r2c-btn:hover, .action-btn:hover { background: var(--green); color: var(--bg); }
 .action-btn.secondary { border-color: var(--border2); color: var(--muted); }
 .action-btn.secondary:hover { background: var(--surface2); color: var(--text); }
-.action-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px; position: sticky; bottom: -20px; background: var(--surface); padding: 10px 0 20px; z-index: 1; }
+.action-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px; }
 
 /* CTA + footer */
 .cta-block { background: linear-gradient(135deg, #0f172a 0%, #111a2e 100%); border: 1px solid #1e293b; border-left: 5px solid var(--green); border-radius: 8px; padding: 32px; margin: 48px 0 24px; }
@@ -174,11 +180,12 @@ details.excl ul { margin: 8px 0 0 18px; color: var(--muted); font-size: 0.78rem;
 @media (max-width: 960px) {
   .layout { grid-template-columns: 1fr; }
   .results-panel { position: static; max-height: none; overflow: visible; }
-  .action-row { position: static; padding: 0; margin: 12px 0 4px; }
   .mbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; padding: 8px 16px; background: var(--surface); border: 0; border-top: 1px solid var(--green); cursor: pointer; text-align: left; }
   .mbar .m-amt { font-family: var(--mono); font-weight: 800; font-size: 1.05rem; }
   .mbar .m-st { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-  .app { padding-bottom: 96px; }
+  .mbar.hide { display: none; }
+  .app { padding-bottom: 24px; }
+  .tool-footer { padding-bottom: 76px; }
 }
 @media (max-width: 640px) {
   .grid3, .grid2, .cta-cols, .inline { grid-template-columns: 1fr; }
@@ -201,9 +208,10 @@ details.excl ul { margin: 8px 0 0 18px; color: var(--muted); font-size: 0.78rem;
   #print-report h1 { font-size: 16px; margin: 0 0 4px; }
   #print-report h2 { font-size: 13px; margin: 14px 0 4px; break-after: avoid; }
   #print-report table { border-collapse: collapse; width: 100%; break-inside: avoid; }
+  #print-report th { width: 26%; }
   #print-report td, #print-report th { padding: 3px 6px; border-bottom: 1px solid #ccc; text-align: left; vertical-align: top; }
   #print-report .big { font-size: 20px; font-weight: 700; margin: 4px 0; }
-  #print-report .rpt-logo { width: 28px; height: 28px; vertical-align: middle; margin-right: 8px; }
+  #print-report .rpt-logo { display: block; width: 340px; max-width: 70%; height: auto; margin: 0 0 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   #print-report ul { margin: 4px 0 0 16px; }
   #print-report .tag { border: 1px solid #555; padding: 0 4px; font-size: 9px; }
   #print-report section { break-inside: avoid; }
@@ -217,7 +225,7 @@ details.excl ul { margin: 8px 0 0 18px; color: var(--muted); font-size: 0.78rem;
     <img class="brand-icon" src="assets/r2c-icon.svg" width="30" height="30" alt="Rack2Cloud">
     <div>
       <div class="header-title">Rack2Cloud</div>
-      <div class="header-sub">Virtual Stack TCO</div>
+      <div class="header-sub">Stack Economics</div>
     </div>
   </div>
   <div class="header-badge">Data Protection</div>
@@ -225,9 +233,9 @@ details.excl ul { margin: 8px 0 0 18px; color: var(--muted); font-size: 0.78rem;
 
 <div class="page-wrap">
   <section class="hero">
-    <div class="hero-eyebrow">Stack Economics: Platform and Rubrik Licensing</div>
+    <div class="hero-eyebrow">Platform and Protection Cost, Annualized</div>
     <h1>Rubrik Virtual <span class="word-green">Stack</span> TCO Calculator</h1>
-    <p class="hero-desc">Put platform licensing and Rubrik protection cost on one annualized line. You supply every rate, and each line shows where its numbers came from.</p>
+    <p class="hero-desc">Compare platform licensing and Rubrik protection costs on one annualized line. Enter your quoted rates, inspect every assumption, and see what the estimate includes.</p>
     <div class="hero-meta">
       <div><span class="ck">&#10003;</span>Deterministic. Not AI-generated.</div>
       <div><span class="ck">&#10003;</span>No rate is prefilled from a price list.</div>
@@ -256,7 +264,7 @@ details.excl ul { margin: 8px 0 0 18px; color: var(--muted); font-size: 0.78rem;
     <div class="cta-block">
       <div class="section-label">Recovery Readiness: Next Steps</div>
       <h3>The calculator annualizes the stack you describe.<br>A review tests it against the quote you hold.</h3>
-      <p class="hint">The calculation uses your rates and stated assumptions. A review checks the licensing metric, the counting rules and the contract terms behind them.</p>
+      <p class="hint">The calculator uses your rates and stated assumptions. It does not review or validate your quote. An architecture review is a separate engagement that checks the licensing metric, the counting rules and the contract terms behind the quote.</p>
       <div class="cta-cols">
         <div>
           <div class="k">&gt;_ Architectural Guidance</div>
@@ -284,7 +292,7 @@ details.excl ul { margin: 8px 0 0 18px; color: var(--muted); font-size: 0.78rem;
   <a href="https://www.rack2cloud.com/">rack2cloud.com</a>
 </div>
 
-<div id="print-report" aria-hidden="true"></div>
+<div id="print-report" aria-hidden="true"><img class="rpt-logo" src="assets/r2c-logo.jpg" width="1024" height="341" alt="Rack2Cloud"><div id="rpt-body"></div></div>
 <div class="sr-only" role="status" aria-live="polite" id="live"></div>
 
 <script>'use strict';
@@ -311,6 +319,8 @@ function defaults() {
     rates: { vmware: { VVF: null, VCF: null }, nutanix: { Pro: null, Ultimate: null }, hyperv: { pack16: null } },
     rateStatus: { vmware: { VVF: 'entered', VCF: 'entered' }, nutanix: { Pro: 'entered', Ultimate: 'entered' }, hyperv: { pack16: 'entered' } },
     amortYears: 3, amortStatus: 'illustrative',
+    // Host, CPU and core counts start as sample values. 'entered' once the user edits any of them.
+    configStatus: 'illustrative',
     rubrik: { metric: null, metricConfirmed: false, frontEndTB: null, reductionRatio: null, rate: null, rateUnit: 'perTBYear', rateStatus: 'entered' }
   };
 }
@@ -371,6 +381,7 @@ function platformModel(i) {
     if (i.amortStatus === 'illustrative') out.flags.push('illustrative');
   } else out.annual = licensable * rate;
   if (st === 'illustrative') out.flags.push('illustrative');
+  if (i.configStatus === 'illustrative') out.flags.push('illustrative-config');
   out.flags = [...new Set(out.flags)];
   return out;
 }
@@ -436,7 +447,8 @@ const CHIP = {
   req: ['!', 'Required', 'req']
 };
 const chip = (k, label) => `<span class="chip ${CHIP[k][2]}"><i aria-hidden="true">${CHIP[k][0]}</i>${esc(label || CHIP[k][1])}</span>`;
-const flagChip = f => f === 'illustrative' ? chip('illus') : f === 'needs-confirmation' ? chip('conf') : '';
+const flagChip = f => f === 'illustrative' ? chip('illus') : f === 'illustrative-config' ? chip('illus', 'Illustrative configuration') : f === 'needs-confirmation' ? chip('conf') : '';
+const FLAG_TEXT = { 'illustrative': 'Illustrative', 'illustrative-config': 'Illustrative configuration (host, CPU and core counts not edited)', 'needs-confirmation': 'Needs confirmation' };
 
 const PLAT = { vmware: 'VMware', nutanix: 'Nutanix', hyperv: 'Hyper-V' };
 const val = v => v === null || v === undefined || (typeof v === 'number' && isNaN(v)) ? '' : v;
@@ -503,13 +515,25 @@ function renderDerived(R) {
   $('chip-rrate').innerHTML = S.rubrik.rate === null || !(S.rubrik.rate > 0) ? chip('req') : chip(S.rubrik.rateStatus === 'illustrative' ? 'illus' : 'entered');
   $('chip-metric').innerHTML = !S.rubrik.metric ? chip('req') : S.rubrik.metricConfirmed ? chip('entered', 'Confirmed by you') : chip('conf');
   const p = R.platform;
-  $('derived-platform').innerHTML = p ? `Physical cores <b>${fmtN(p.physicalCores, 0)}</b> &rarr; licensable <b>${fmtN(p.licensableCores, 0)}</b>${p.floorAdds > 0 ? ` <span class="adds">(+${fmtN(p.floorAdds, 0)} from the platform floor)</span>` : ''}<br>${esc(p.floorNote)}` : 'Fix the highlighted platform inputs to see licensable cores.';
+  const cfg = S.configStatus === 'illustrative' ? chip('illus', 'Illustrative sample configuration') : chip('entered', 'Configuration entered by you');
+  $('derived-platform').innerHTML = p ? `Physical cores <b>${fmtN(p.physicalCores, 0)}</b> &rarr; licensable <b>${fmtN(p.licensableCores, 0)}</b>${p.floorAdds > 0 ? ` <span class="adds">(+${fmtN(p.floorAdds, 0)} from the platform floor)</span>` : ''}<br>${esc(p.floorNote)}<div class="cfgrow">${cfg}</div>` : 'Fix the highlighted platform inputs to see licensable cores.';
   const q = R.rubrik;
-  $('derived-rubrik').innerHTML = q && q.qty !== null ? `Modeled quantity <b>${fmtN(q.qty, 2)} ${q.qtyUnit}</b>${S.rubrik.metricConfirmed ? '' : '<br>Not a billing figure until your order confirms the metric and how capacity is counted.'}` : 'Choose a metric and enter protected capacity to see the modeled quantity.';
+  $('derived-rubrik').innerHTML = rubrikDerived(R);
   const errs = R.errors;
   $('errs').hidden = errs.length === 0; $('errs').innerHTML = errs.length ? '<ul>' + errs.map(e => `<li>${esc(e.msg)}</li>`).join('') + '</ul>' : '';
   document.querySelectorAll('.field.invalid').forEach(f => f.classList.remove('invalid'));
   errs.forEach(e => { const f = $('fld-' + e.field); if (f) f.classList.add('invalid'); });
+}
+
+function rubrikDerived(R) {
+  const r = S.rubrik, q = R.rubrik;
+  const prov = r.metric && !r.metricConfirmed ? '<br><b class="prov">Provisional:</b> the metric is not confirmed in your order, so this is not a billing figure.' : '';
+  if (!r.metric) return 'Choose a metric and enter protected capacity to see the modeled quantity.';
+  if (r.metric === 'FETB') {
+    return (q && q.qty !== null ? `Your rate applies to the protected front-end capacity: modeled quantity <b>${fmtN(q.qty, 2)} FETB</b>.` : 'Your rate applies to the protected front-end capacity. Enter that capacity to see the modeled quantity.') + prov;
+  }
+  if (!(r.reductionRatio > 0)) return 'Your rate applies to modeled back-end capacity, which is front-end capacity divided by a reduction ratio. <b>Enter a reduction ratio to calculate it.</b> The ratio is your assumption, not a Rubrik figure.' + prov;
+  return (q && q.qty !== null ? `Your rate applies to modeled back-end capacity: ${fmtN(r.frontEndTB, 2)} TB front-end &divide; ${fmtN(r.reductionRatio, 2)} = <b>${fmtN(q.qty, 2)} BETB</b>.` : 'Enter protected front-end capacity to see the modeled back-end quantity.') + '<br>The ratio is your assumption, not a Rubrik figure.' + prov;
 }
 
 function bridgeHTML(R) {
@@ -542,12 +566,13 @@ function renderResults(R) {
   const t = R.total, p = R.platform, q = R.rubrik;
   let head;
   const fl = t.flags.map(flagChip).join('');
-  if (t.kind === 'complete') head = `<div class="total complete"><div class="tl">Annualized stack total</div><div class="tv">${fmt(t.amount)}</div><div class="ts">Platform plus Rubrik, per year. Excludes the items listed below.</div><div class="chips">${fl}</div></div>`;
+  const prov = t.flags.includes('needs-confirmation');
+  if (t.kind === 'complete') head = `<div class="total complete ${prov ? 'prov' : ''}"><div class="tl">Annualized stack total${prov ? ', provisional' : ''}</div><div class="tv">${fmt(t.amount)}</div><div class="ts">Platform plus Rubrik, per year. Excludes the items listed below.${prov ? ' Provisional: the Rubrik metric is not confirmed in your order.' : ''}</div><div class="chips">${fl}</div></div>`;
   else if (t.kind === 'incomplete') head = `<div class="total empty"><div class="tl">No total yet</div><div class="tv">Enter your rates to begin.</div><div class="ts">Each model needs its own inputs. A missing value is never counted as zero. <button type="button" class="link-btn" data-act="example">Load illustrative example</button></div></div>`;
   else {
     const which = t.kind === 'partial-platform' ? 'platform only' : 'Rubrik only';
     const need = t.kind === 'partial-platform' ? (q ? q.missing : ['Rubrik inputs']) : (p ? p.missing : ['platform inputs']);
-    head = `<div class="total partial"><div class="tl">Partial total: ${which}</div><div class="tv">${fmt(t.amount)}</div><div class="ts">${t.kind === 'partial-platform' ? 'Rubrik' : 'Platform'} is not included. Still needed: ${esc(need.join(', '))}.</div><div class="chips">${fl}</div></div>`;
+    head = `<div class="total partial"><div class="tl">Partial total: ${which}${prov ? ', provisional' : ''}</div><div class="tv">${fmt(t.amount)}</div><div class="ts">${t.kind === 'partial-platform' ? 'Rubrik' : 'Platform'} is not included. Still needed: ${esc(need.join(', '))}.</div><div class="chips">${fl}</div></div>`;
   }
   let pl = '';
   if (p) {
@@ -569,19 +594,20 @@ function renderResults(R) {
   $('rp').querySelectorAll('[data-w]').forEach(el => { el.style.width = el.dataset.w + '%'; });
   const summary = t.kind === 'incomplete' ? 'No total yet' : (t.kind === 'complete' ? 'Annualized stack total ' : 'Partial total ') + fmt(t.amount);
   $('mbar-amt').textContent = t.amount === null ? 'No total yet' : fmt(t.amount);
-  $('mbar-st').textContent = t.kind === 'complete' ? 'Annualized' : t.kind === 'incomplete' ? 'Enter rates' : 'Partial';
+  $('mbar-st').textContent = t.kind === 'complete' ? (prov ? 'Provisional' : 'Annualized') : t.kind === 'incomplete' ? 'Enter rates' : 'Partial';
   $('live').textContent = summary;
 }
 
-function statusText(flags, missing) { return missing && missing.length ? 'Required: ' + missing.join(', ') : (flags.length ? flags.map(f => f === 'illustrative' ? 'Illustrative' : 'Needs confirmation').join('; ') : 'Entered by you'); }
+function statusText(flags, missing) { return missing && missing.length ? 'Required: ' + missing.join(', ') : (flags.length ? flags.map(f => FLAG_TEXT[f] || f).join('; ') : 'Entered by you'); }
 
 function summaryText(R) {
   const t = R.total, p = R.platform, q = R.rubrik, r = S.rubrik, L = [];
   L.push('Rubrik Virtual Stack TCO Calculator (rack2cloud.com)');
+  if (t.flags.includes('needs-confirmation')) L.push('PROVISIONAL: the Rubrik licensing metric is not confirmed in the order.');
   L.push((t.kind === 'complete' ? 'Annualized stack total: ' : t.kind === 'incomplete' ? 'No total yet' : 'Partial total (' + (t.kind === 'partial-platform' ? 'platform only' : 'Rubrik only') + '): ') + (t.amount === null ? '' : fmt(t.amount)));
-  if (p) L.push(`Platform: ${p.label}; ${S.hosts} hosts x ${S.cpusPerHost} CPUs x ${S.coresPerCpu} cores; ${fmtN(p.licensableCores, 0)} licensable cores; ${p.annual === null ? 'no figure yet' : fmt(p.annual) + ' per year' + (p.kind === 'amortized-perpetual' ? ` (one-time ${fmt(p.perpetualTotal)} amortized over ${p.amortYears} years)` : '')} [${statusText(p.flags, p.missing)}]`);
+  if (p) L.push(`Platform: ${p.label}; ${S.hosts} hosts x ${S.cpusPerHost} CPUs x ${S.coresPerCpu} cores (${S.configStatus === 'illustrative' ? 'illustrative sample configuration' : 'entered by you'}); rate ${p.rate === null ? 'not entered' : fmtN(p.rate, 2) + (S.platform === 'hyperv' ? ' per 16-core pack, one-time' : ' per core per year')}; ${fmtN(p.licensableCores, 0)} licensable cores; ${p.annual === null ? 'no figure yet' : fmt(p.annual) + ' per year' + (p.kind === 'amortized-perpetual' ? ` (one-time ${fmt(p.perpetualTotal)} amortized over ${p.amortYears} years)` : '')} [${statusText(p.flags, p.missing)}]`);
   if (q) L.push(`Rubrik: metric ${r.metric || 'not chosen'}; protected front-end ${r.frontEndTB === null ? 'not entered' : r.frontEndTB + ' TB'}${r.metric === 'BETB' && r.reductionRatio ? '; modeled reduction ratio ' + r.reductionRatio + ':1' : ''}; modeled quantity ${q.qty === null ? 'n/a' : fmtN(q.qty, 2) + ' ' + q.qtyUnit}; ${q.annual === null ? 'no figure yet' : fmt(q.annual) + ' per year at ' + r.rate + ' ' + RATE_UNITS[r.rateUnit]} [${statusText(q.flags, q.missing)}]`);
-  L.push('Status key: Entered by you = your value; Illustrative = sample value, not a price; Needs confirmation = metric not confirmed in your order; Required = a missing value blocks the figure.');
+  L.push('Status key: Entered by you = your value; Illustrative = sample value, not a price; Illustrative configuration = host, CPU and core counts left at the sample values; Needs confirmation = metric not confirmed in your order; Required = a missing value blocks the figure.');
   L.push('Excludes: ' + EXCLUSIONS.join('; ') + '.');
   L.push('Rates are user-supplied. This is a calculation, not a quote.');
   return L.join('\n');
@@ -590,11 +616,11 @@ function summaryText(R) {
 function printReport(R) {
   const t = R.total, p = R.platform, q = R.rubrik, r = S.rubrik;
   const row = (a, b) => `<tr><th>${esc(a)}</th><td>${b}</td></tr>`;
-  $('print-report').innerHTML = `<h1><img class="rpt-logo" src="assets/r2c-icon.svg" alt="">Rubrik Virtual Stack TCO Calculator</h1><div>rack2cloud.com</div>
-  <section><h2>Result</h2><div class="big">${t.amount === null ? 'No total yet' : fmt(t.amount)}</div><div>${t.kind === 'complete' ? 'Annualized stack total (platform plus Rubrik, per year)' : t.kind === 'incomplete' ? 'Inputs are incomplete. No figure is shown.' : 'Partial total: ' + (t.kind === 'partial-platform' ? 'platform only; Rubrik is not included' : 'Rubrik only; platform is not included')}</div></section>
-  <section><h2>Platform</h2><table>${p ? row('Platform', esc(p.label)) + row('Hosts, CPUs, cores', `${S.hosts} x ${S.cpusPerHost} x ${S.coresPerCpu}`) + row('Licensable cores', fmtN(p.licensableCores, 0) + ' (physical ' + fmtN(p.physicalCores, 0) + ')') + row('Rate', p.rate === null ? 'not entered' : fmtN(p.rate, 2) + (S.platform === 'hyperv' ? ' per 16-core pack, one-time' : ' per core per year')) + (p.perpetualTotal !== null ? row('One-time total', fmt(p.perpetualTotal) + ', amortized over ' + p.amortYears + ' years') : '') + row('Annual', p.annual === null ? 'no figure yet' : fmt(p.annual)) + row('Status', esc(statusText(p.flags, p.missing))) + row('Basis note', esc(p.floorNote)) : row('Platform', 'inputs need correction')}</table></section>
+  $('rpt-body').innerHTML = `<h1>Rubrik Virtual Stack TCO Calculator</h1><div>rack2cloud.com</div>
+  <section><h2>Result</h2>${t.flags.includes('needs-confirmation') ? '<div><b>PROVISIONAL:</b> the Rubrik licensing metric is not confirmed in the order.</div>' : ''}<div class="big">${t.amount === null ? 'No total yet' : fmt(t.amount)}</div><div>${t.kind === 'complete' ? 'Annualized stack total (platform plus Rubrik, per year)' : t.kind === 'incomplete' ? 'Inputs are incomplete. No figure is shown.' : 'Partial total: ' + (t.kind === 'partial-platform' ? 'platform only; Rubrik is not included' : 'Rubrik only; platform is not included')}</div></section>
+  <section><h2>Platform</h2><table>${p ? row('Platform', esc(p.label)) + row('Hosts, CPUs, cores', `${S.hosts} x ${S.cpusPerHost} x ${S.coresPerCpu} (${S.configStatus === 'illustrative' ? 'illustrative sample configuration' : 'entered by you'})`) + row('Licensable cores', fmtN(p.licensableCores, 0) + ' (physical ' + fmtN(p.physicalCores, 0) + ')') + row('Rate', p.rate === null ? 'not entered' : fmtN(p.rate, 2) + (S.platform === 'hyperv' ? ' per 16-core pack, one-time' : ' per core per year')) + (p.perpetualTotal !== null ? row('One-time total', fmt(p.perpetualTotal) + ', amortized over ' + p.amortYears + ' years') : '') + row('Annual', p.annual === null ? 'no figure yet' : fmt(p.annual)) + row('Status', esc(statusText(p.flags, p.missing))) + row('Basis note', esc(p.floorNote)) : row('Platform', 'inputs need correction')}</table></section>
   <section><h2>Rubrik protection</h2><table>${q ? row('Metric', esc(r.metric || 'not chosen') + (r.metricConfirmed ? ' (confirmed by you in your order)' : ' (not confirmed)')) + row('Protected front-end', r.frontEndTB === null ? 'not entered' : r.frontEndTB + ' TB') + (r.metric === 'BETB' ? row('Modeled reduction ratio', r.reductionRatio ? r.reductionRatio + ':1 (an assumption, not a contract term)' : 'not entered') : '') + row('Modeled quantity', q.qty === null ? 'n/a' : fmtN(q.qty, 2) + ' ' + q.qtyUnit) + row('Rate', r.rate === null ? 'not entered' : r.rate + ' ' + RATE_UNITS[r.rateUnit]) + row('Annual', q.annual === null ? 'no figure yet' : fmt(q.annual)) + row('Status', esc(statusText(q.flags, q.missing))) : row('Rubrik', 'inputs need correction')}</table></section>
-  <section><h2>Status key</h2><ul><li>Entered by you: a value you supplied.</li><li>Illustrative: a sample value, not a price.</li><li>Needs confirmation: the metric is not confirmed in your order.</li><li>Required: a missing value blocks the figure.</li></ul></section>
+  <section><h2>Status key</h2><ul><li>Entered by you: a value you supplied.</li><li>Illustrative: a sample value, not a price. Illustrative configuration: host, CPU and core counts left at the sample values.</li><li>Needs confirmation: the metric is not confirmed in your order.</li><li>Required: a missing value blocks the figure.</li></ul></section>
   <section><h2>Excluded from this estimate</h2><ul>${EXCLUSIONS.map(e => `<li>${esc(e)}</li>`).join('')}</ul></section>
   <section><h2>Basis</h2><p>Rates are the ones you entered. This is a calculation, not a quote. Rubrik licensing terms referenced: ${esc(GUIDE)}.</p></section>`;
 }
@@ -606,9 +632,9 @@ function keepFocus(sel) { const el = document.querySelector(sel); if (el) el.foc
 document.addEventListener('input', e => {
   const id = e.target.id;
   if (!id || !id.startsWith('f-')) return;
-  if (id === 'f-hosts') S.hosts = readStruct(e.target);
-  else if (id === 'f-cpus') S.cpusPerHost = readStruct(e.target);
-  else if (id === 'f-cores') S.coresPerCpu = readStruct(e.target);
+  if (id === 'f-hosts') { S.hosts = readStruct(e.target); S.configStatus = 'entered'; }
+  else if (id === 'f-cpus') { S.cpusPerHost = readStruct(e.target); S.configStatus = 'entered'; }
+  else if (id === 'f-cores') { S.coresPerCpu = readStruct(e.target); S.configStatus = 'entered'; }
   else if (id === 'f-rate') setRate(read(e.target));
   else if (id === 'f-amort') { S.amortYears = readStruct(e.target); S.amortStatus = 'entered'; }
   else if (id === 'f-fetb') S.rubrik.frontEndTB = read(e.target);
@@ -620,7 +646,8 @@ document.addEventListener('input', e => {
   recalc();
 });
 
-function structural() { return { platform: S.platform, hosts: S.hosts, cpusPerHost: S.cpusPerHost, coresPerCpu: S.coresPerCpu, vmwareEdition: S.vmwareEdition, nutanixTier: S.nutanixTier }; }
+// Platform configuration survives Load example and Clear: only rates and Rubrik inputs are reset.
+function structural() { return { platform: S.platform, hosts: S.hosts, cpusPerHost: S.cpusPerHost, coresPerCpu: S.coresPerCpu, vmwareEdition: S.vmwareEdition, nutanixTier: S.nutanixTier, configStatus: S.configStatus, amortYears: S.amortYears, amortStatus: S.amortStatus }; }
 
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
@@ -636,9 +663,17 @@ document.addEventListener('click', async e => {
     try { await navigator.clipboard.writeText(txt); b.textContent = '✓ Copied'; } catch (_) { b.textContent = 'Copy blocked by browser'; }
     setTimeout(() => { const c = $('btn-copy'); if (c) c.textContent = 'Copy results'; }, 2000);
   }
-  else if (act === 'print') { printReport(lastResult); window.print(); }
+  else if (act === 'print') {
+    printReport(lastResult);
+    // The logo is in the DOM from page load; wait for it to decode so the print preview never shows an empty block.
+    const im = document.querySelector('#print-report .rpt-logo');
+    await Promise.race([im && im.decode ? im.decode().catch(() => {}) : Promise.resolve(), new Promise(r => setTimeout(r, 1500))]);
+    window.print();
+  }
 });
 $('mbar').addEventListener('click', () => { $('results').scrollIntoView(); $('results').focus(); });
+// Hide the mobile bar while the full result is on screen, so it never covers the result it summarizes.
+if ('IntersectionObserver' in window) new IntersectionObserver(en => { $('mbar').classList.toggle('hide', en[0].isIntersecting); }, { threshold: 0.15 }).observe($('results'));
 
 renderForm();
 recalc();

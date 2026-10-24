@@ -14,7 +14,7 @@ const check = (name, okk, detail) => { report.checks.push({ name, pass: !!okk, d
   // ---- 1. static scan ----
   const html = fs.readFileSync(path.join(dist, 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
-  const refOk = u => /^(fonts\/[a-z0-9-]+\.woff2|assets\/r2c-icon\.svg)$/.test(u);
+  const refOk = u => /^(fonts\/[a-z0-9-]+\.woff2|assets\/r2c-icon\.svg|assets\/r2c-logo\.jpg)$/.test(u);
   const loaders = [...html.matchAll(/<(?:script|img|iframe|source|video|audio|embed|object)\b[^>]*\b(?:src|data)=["']([^"']+)["']/gi)].map(m => m[1])
     .concat([...html.matchAll(/<link\b(?![^>]*rel=["']canonical["'])[^>]*\bhref=["']([^"']+)["']/gi)].map(m => m[1]));
   check('static: every resource reference is a same-origin local font or the local icon', loaders.every(refOk), loaders.filter(u => !refOk(u)));
@@ -71,8 +71,8 @@ const check = (name, okk, detail) => { report.checks.push({ name, pass: !!okk, d
   const origin = new URL(s.url).origin;
   check('capture: every request in the session is same-origin', requests.every(r => new URL(r.url).origin === origin), requests.filter(r => new URL(r.url).origin !== origin));
   check('capture: no request other than GET', requests.every(r => r.method === 'GET' && !r.post), requests.filter(r => r.method !== 'GET'));
-  const allowed = r => r.url === s.url + '/' || /\/fonts\/[a-z0-9-]+\.woff2$/.test(r.url) || r.url === s.url + '/assets/r2c-icon.svg';
-  check('capture: the only requests are the page, local WOFF2 fonts and the local icon', requests.every(allowed), requests.filter(r => !allowed(r)));
+  const allowed = r => r.url === s.url + '/' || /\/fonts\/[a-z0-9-]+\.woff2$/.test(r.url) || r.url === s.url + '/assets/r2c-icon.svg' || r.url === s.url + '/assets/r2c-logo.jpg';
+  check('capture: the only requests are the page, local WOFF2 fonts, the local icon and the local logo', requests.every(allowed), requests.filter(r => !allowed(r)));
   check('capture: no scripts, stylesheets, XHR/fetch, workers or websockets were requested', !requests.some(r => ['script', 'stylesheet', 'xhr', 'fetch', 'websocket', 'ping', 'eventsource'].includes(r.type)), requests.map(r => r.type));
   check('capture: no CSP violations and no calls to fetch / sendBeacon / XHR / WebSocket', sec.length === 0, sec);
   check('capture: no cookies and no web storage were created', cookies.length === 0 && storage.ls === 0 && storage.ss === 0, { cookies, storage });

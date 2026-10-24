@@ -22,6 +22,8 @@ function defaults() {
     rates: { vmware: { VVF: null, VCF: null }, nutanix: { Pro: null, Ultimate: null }, hyperv: { pack16: null } },
     rateStatus: { vmware: { VVF: 'entered', VCF: 'entered' }, nutanix: { Pro: 'entered', Ultimate: 'entered' }, hyperv: { pack16: 'entered' } },
     amortYears: 3, amortStatus: 'illustrative',
+    // Host, CPU and core counts start as sample values. 'entered' once the user edits any of them.
+    configStatus: 'illustrative',
     rubrik: { metric: null, metricConfirmed: false, frontEndTB: null, reductionRatio: null, rate: null, rateUnit: 'perTBYear', rateStatus: 'entered' }
   };
 }
@@ -82,6 +84,7 @@ function platformModel(i) {
     if (i.amortStatus === 'illustrative') out.flags.push('illustrative');
   } else out.annual = licensable * rate;
   if (st === 'illustrative') out.flags.push('illustrative');
+  if (i.configStatus === 'illustrative') out.flags.push('illustrative-config');
   out.flags = [...new Set(out.flags)];
   return out;
 }

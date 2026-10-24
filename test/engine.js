@@ -57,7 +57,7 @@ t('Zero rate is treated as not entered, not as a free product', () => {
 });
 t('Illustrative values carry the illustrative flag; entering a rate clears it for that rate', () => {
   const i = E.illustrative(); let r = E.compute(i); assert.ok(r.total.flags.includes('illustrative'));
-  i.rateStatus.vmware.VVF = 'entered'; i.rubrik.rateStatus = 'entered'; r = E.compute(i); assert.ok(!r.total.flags.includes('illustrative') || r.platform.flags.length === 0);
+  i.rateStatus.vmware.VVF = 'entered'; i.rubrik.rateStatus = 'entered'; i.configStatus = 'entered'; r = E.compute(i); assert.ok(!r.total.flags.includes('illustrative') || r.platform.flags.length === 0);
   assert.deepStrictEqual(r.platform.flags, []); assert.ok(r.rubrik.flags.includes('needs-confirmation'));
 });
 t('Illustrative sample rates are round numbers, not price points', () => {
@@ -77,5 +77,10 @@ t('Deterministic: identical inputs give identical output', () => {
 });
 t('Exclusions list names the unmodeled contract mechanics', () => {
   const s = E.EXCLUSIONS.join('|'); assert.ok(/Scale Reviews/.test(s) && /Capacity Burst/.test(s) && /Utility/.test(s));
+});
+t('Sample host/CPU/core counts carry an illustrative-configuration flag until the user edits them', () => {
+  const i = E.illustrative(); i.rateStatus.vmware.VVF = 'entered'; i.rubrik.rateStatus = 'entered';
+  let r = E.compute(i); assert.ok(r.platform.flags.includes('illustrative-config')); assert.ok(r.total.flags.includes('illustrative-config'));
+  i.configStatus = 'entered'; r = E.compute(i); assert.ok(!r.platform.flags.includes('illustrative-config'));
 });
 console.log(`\n${n} engine tests passed`);
