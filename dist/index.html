@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-21De46vOC0dr0XTkd0a8luhpmCS0QclFY0IVAWQZ1Fs='; style-src 'sha256-tpiCI7e2vt7BHQBW1GnEMt9Q/I+aqqQLuhP6Yp3Tqto='; connect-src 'none'; font-src 'self'; img-src 'self' data:; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Rubrik Virtual Stack TCO Calculator | rack2cloud</title>
+<meta name="description" content="Rubrik Virtual Stack TCO Calculator: annualize VMware, Nutanix or Hyper-V licensing next to Rubrik protection cost, with every rate and assumption labelled.">
+<link rel="canonical" href="https://rvstc.rack2cloud.com/">
+<meta name="robots" content="index,follow">
+<link rel="icon" type="image/svg+xml" href="assets/r2c-icon.svg">
+<link rel="preload" href="fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/jetbrains-mono-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>/* Reset */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Rack2Cloud design system: locked :root block (tmpl-app-build.md). Accent = Data Protection pillar (--green).
+   Status tokens are separate from the accent. Each status also has its own border style and a text label. */
+:root {
+  --bg: #0a0f1e; --surface: #0f172a; --surface2: #1e293b; --border: #1e293b; --border2: #334155;
+  --text: #e2e8f0; --muted: #94a3b8; --dim: #64748b; --faint: #475569; --ghost: #334155;
+  --purple: #a78bfa; --cyan: #38bdf8; --green: #22c55e; --green-bg: rgba(34,197,94,0.08); --green-glow: rgba(34,197,94,0.15);
+  --amber: #f59e0b; --red: #ef4444;
+  --mono: 'JetBrains Mono', monospace; --sans: 'Inter', sans-serif;
+}
+
+@font-face { font-family: 'Inter'; font-weight: 400; font-style: normal; font-display: swap; src: url(fonts/inter-latin-400-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 500; font-style: normal; font-display: swap; src: url(fonts/inter-latin-500-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 600; font-style: normal; font-display: swap; src: url(fonts/inter-latin-600-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 700; font-style: normal; font-display: swap; src: url(fonts/inter-latin-700-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 800 900; font-style: normal; font-display: swap; src: url(fonts/inter-latin-900-normal.woff2) format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 400; font-style: normal; font-display: swap; src: url(fonts/jetbrains-mono-latin-400-normal.woff2) format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 600; font-style: normal; font-display: swap; src: url(fonts/jetbrains-mono-latin-600-normal.woff2) format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 700; font-style: normal; font-display: swap; src: url(fonts/jetbrains-mono-latin-700-normal.woff2) format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 800 900; font-style: normal; font-display: swap; src: url(fonts/jetbrains-mono-latin-800-normal.woff2) format('woff2'); }
+
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+.page-wrap { max-width: 1400px; margin: 0 auto; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible, #results:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+
+/* Header */
+.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; position: sticky; top: 0; z-index: 100; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-icon { flex: none; border-radius: 4px; display: block; }
+.header-title { font-family: var(--mono); font-size: 0.82rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #fff; line-height: 1.2; }
+.header-sub { font-family: var(--mono); font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--green); margin-top: 2px; }
+.header-badge { font-family: var(--mono); font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--green); border: 1px solid var(--green); padding: 5px 12px; border-radius: 4px; background: var(--green-bg); }
+
+/* Hero */
+.hero { padding: 48px 5% 32px; }
+.hero-eyebrow { font-family: var(--mono); font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: var(--green); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.hero-eyebrow::before { content: '>_'; color: var(--faint); }
+.hero h1 { font-family: var(--sans); font-size: clamp(2.2rem, 5vw, 4.2rem); font-weight: 900; line-height: 1.0; letter-spacing: -2px; color: #fff; text-transform: uppercase; margin-bottom: 20px; }
+.hero h1 .word-green { color: var(--green); }
+.hero-desc { font-family: var(--mono); font-size: 0.84rem; color: var(--muted); line-height: 1.7; text-transform: uppercase; letter-spacing: 0.5px; max-width: 900px; }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 20px; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+.hero-meta span.ck { color: var(--green); margin-right: 6px; }
+
+/* Layout */
+.app { padding: 0 5% 60px; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 460px); gap: 24px; align-items: start; }
+.inputs { min-width: 0; }
+.results-panel { position: static; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 20px; }
+/* No inner scrolling. The panel stays pinned only when the whole panel fits the viewport. */
+@media (min-width: 961px) and (min-height: 940px) { .results-panel { position: sticky; top: 76px; } }
+html { scroll-padding-top: 76px; scroll-padding-bottom: 76px; }
+.cfgrow { margin-top: 8px; }
+.prov { color: var(--amber); }
+.total.prov { border: 2px dashed var(--amber); }
+
+.section-label { font-family: var(--mono); font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: var(--green); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.section-label::before { content: '>_'; color: var(--faint); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 24px; margin-bottom: 16px; }
+.hint { color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
+.mb12 { margin-bottom: 12px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+
+/* Controls */
+.toggle-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.toggle-btn { flex: 1; min-width: 88px; min-height: 44px; background: var(--bg); border: 1px solid var(--border2); color: var(--muted); font-family: var(--mono); font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 10px 12px; border-radius: 4px; cursor: pointer; transition: all 0.15s; text-align: center; }
+.toggle-btn[aria-pressed="true"] { color: var(--green); border-color: var(--green); background: var(--green-bg); }
+.toggle-btn:hover:not([aria-pressed="true"]) { color: var(--text); }
+.field { margin-bottom: 14px; min-width: 0; }
+.field label, .field .flabel { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+.field input[type=number], .field select { width: 100%; min-height: 44px; background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 4px; padding: 8px 12px; font-family: var(--mono); font-size: 0.95rem; }
+.field input:focus-visible, .field select:focus-visible { border-color: var(--cyan); }
+.field .hint { margin-top: 4px; }
+.field.invalid input { border-color: var(--red); }
+.inline { display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 8px; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 0.85rem; color: var(--text); margin: 4px 0 14px; cursor: pointer; }
+.check input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--green); flex: none; }
+.derived { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); border-left: 2px solid var(--border2); padding: 4px 0 4px 12px; margin: 4px 0 4px; line-height: 1.6; }
+.derived b { color: var(--text); font-weight: 700; }
+.derived .adds { color: var(--amber); }
+.card-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.link-btn { background: none; border: 0; color: var(--green); cursor: pointer; text-decoration: underline; font-size: 0.8rem; padding: 4px 0; min-height: 32px; }
+
+.errs { border: 1px solid var(--red); background: rgba(239,68,68,0.08); border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; font-size: 0.82rem; color: #fecaca; }
+.errs ul { padding-left: 18px; }
+
+/* Status chips: text label + icon + border style, so colour is never the only signal */
+.chip { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 0.62rem; font-weight: 800; letter-spacing: 0.4px; padding: 2px 8px; border-radius: 3px; line-height: 1.5; white-space: nowrap; }
+.chip i { font-style: normal; }
+.chip.entered { color: var(--green); border: 1px solid var(--green); background: var(--green-bg); }
+.chip.illus { color: var(--amber); border: 2px dashed var(--amber); background: rgba(245,158,11,0.08); }
+.chip.conf { color: var(--amber); border: 2px dotted var(--amber); background: rgba(245,158,11,0.08); }
+.chip.req { color: #fca5a5; border: 2px double var(--red); background: rgba(239,68,68,0.08); }
+
+/* Results */
+.total { border-radius: 6px; padding: 16px; margin-bottom: 14px; }
+.total .tl { font-family: var(--mono); font-size: 0.68rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.total .tv { font-family: var(--mono); font-size: clamp(1.9rem, 4vw, 2.5rem); font-weight: 800; color: #fff; line-height: 1.1; letter-spacing: -1px; overflow-wrap: anywhere; }
+.total .ts { font-size: 0.8rem; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+.total .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.total.complete { border: 1px solid var(--green); background: var(--green-bg); }
+.total.partial { border: 2px dashed var(--amber); background: rgba(245,158,11,0.06); }
+.total.empty { border: 2px double var(--border2); background: var(--bg); }
+.total.empty .tv { font-size: 1.15rem; letter-spacing: 0; }
+.line { border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; background: var(--bg); }
+.line .lh { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.line .lt { font-weight: 700; font-size: 0.9rem; }
+.line .la { font-family: var(--mono); font-weight: 800; font-size: 1rem; }
+.line .la.na { color: var(--muted); font-weight: 600; font-size: 0.78rem; }
+.line .lm { font-size: 0.78rem; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+.line .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.line .need { color: #fca5a5; }
+.line .warn { color: var(--amber); }
+
+/* Metric bridge */
+.bridge { margin: 16px 0; padding: 14px; border: 1px solid var(--border2); border-radius: 6px; background: var(--bg); }
+.bridge .bt { font-family: var(--mono); font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+.br-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 92px; gap: 10px; align-items: center; }
+.br-k { font-family: var(--mono); font-size: 0.72rem; font-weight: 800; color: var(--muted); }
+.br-track { height: 26px; border-radius: 3px; background: var(--surface); border: 1px solid var(--border); position: relative; overflow: hidden; }
+.br-bar { height: 100%; border-radius: 2px; background: var(--surface2); border-right: 1px solid var(--border2); transition: width 0.25s; }
+.br-bar.full { width: 100%; }
+.br-bar.billed { background: var(--green-glow); border-right: 3px solid var(--green); }
+.br-bar.pending { width: 100% !important; background: transparent; border-right: 0; background-image: repeating-linear-gradient(135deg, transparent 0 6px, var(--border2) 6px 7px); }
+.br-v { font-family: var(--mono); font-size: 0.75rem; text-align: right; color: var(--text); }
+.br-v.na { color: var(--dim); }
+.br-mid { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; margin: 6px 0; }
+.br-ratio { grid-column: 2; font-size: 0.75rem; color: var(--muted); border-left: 2px solid var(--border2); padding-left: 10px; line-height: 1.45; }
+.br-note { font-size: 0.72rem; color: var(--dim); margin-top: 12px; line-height: 1.5; }
+
+details.excl { margin: 12px 0; }
+details.excl summary { cursor: pointer; font-size: 0.8rem; color: var(--muted); min-height: 32px; }
+details.excl ul { margin: 8px 0 0 18px; color: var(--muted); font-size: 0.78rem; line-height: 1.6; }
+.notmodeled { border: 1px dashed var(--border2); border-radius: 6px; padding: 14px 16px; margin: 4px 0 16px; background: var(--surface); }
+.notmodeled .nm-t { font-family: var(--mono); font-size: 0.68rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--amber); margin-bottom: 6px; }
+.notmodeled p { font-size: 0.82rem; color: var(--muted); line-height: 1.55; }
+
+/* Buttons */
+.r2c-btn, .action-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; background: var(--bg); border: 1px solid var(--green); color: var(--green); font-family: var(--mono); font-size: 0.72rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; padding: 10px 20px; border-radius: 4px; cursor: pointer; text-decoration: none; transition: all 0.15s; }
+.r2c-btn:hover, .action-btn:hover { background: var(--green); color: var(--bg); }
+.action-btn.secondary { border-color: var(--border2); color: var(--muted); }
+.action-btn.secondary:hover { background: var(--surface2); color: var(--text); }
+.action-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px; }
+
+/* CTA + footer */
+.cta-block { background: linear-gradient(135deg, #0f172a 0%, #111a2e 100%); border: 1px solid #1e293b; border-left: 5px solid var(--green); border-radius: 8px; padding: 32px; margin: 48px 0 24px; }
+.cta-block h3 { color: #fff; font-size: clamp(1.15rem, 2.6vw, 1.5rem); font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px; margin-bottom: 8px; }
+.cta-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 20px; }
+.cta-cols > div + div { border-left: 1px solid var(--border); padding-left: 32px; }
+.cta-cols .k { font-family: var(--mono); font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: var(--green); margin-bottom: 10px; }
+.cta-cols .k.dimk { color: var(--muted); }
+.cta-cols h4 { color: #fff; font-size: 1rem; font-weight: 800; margin-bottom: 8px; }
+.cta-cols p { color: var(--muted); font-size: 0.85rem; margin-bottom: 14px; }
+.tool-footer { padding: 16px 24px; border-top: 1px solid var(--border); text-align: center; color: var(--muted); font-family: var(--mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 40px; }
+.tool-footer a { color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--border2); }
+.tool-footer a:hover { color: var(--green); border-color: var(--green); }
+
+.mbar { display: none; }
+
+/* Responsive: inputs above results; results panel is sticky on desktop only; a compact bar replaces it on phones */
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; }
+  .results-panel { position: static; max-height: none; overflow: visible; }
+  .mbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; padding: 8px 16px; background: var(--surface); border: 0; border-top: 1px solid var(--green); cursor: pointer; text-align: left; }
+  .mbar .m-amt { font-family: var(--mono); font-weight: 800; font-size: 1.05rem; }
+  .mbar .m-st { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .mbar.hide { display: none; }
+  .app { padding-bottom: 24px; }
+  .tool-footer { padding-bottom: 76px; }
+}
+@media (max-width: 640px) {
+  .grid3, .grid2, .cta-cols, .inline { grid-template-columns: 1fr; }
+  .cta-cols > div + div { border-left: 0; padding-left: 0; border-top: 1px solid var(--border); padding-top: 20px; }
+  .hero h1 { letter-spacing: -0.5px; font-size: 2.2rem; }
+  .header { padding: 12px 16px; }
+  .hero { padding: 28px 4% 24px; }
+  .app { padding: 0 4% 96px; }
+  .card { padding: 18px 16px; }
+  .cta-block { padding: 22px 18px; }
+  .br-row { grid-template-columns: 40px minmax(0, 1fr) 76px; }
+}
+
+/* Print / Save PDF: a dedicated report, light background, no controls */
+#print-report { display: none; }
+@media print {
+  body > *:not(#print-report) { display: none !important; }
+  #print-report { display: block !important; background: #fff; color: #111; font: 11px/1.4 Arial, Helvetica, sans-serif; padding: 0; }
+  body { background: #fff; }
+  #print-report h1 { font-size: 16px; margin: 0 0 4px; }
+  #print-report h2 { font-size: 13px; margin: 14px 0 4px; break-after: avoid; }
+  #print-report table { border-collapse: collapse; width: 100%; break-inside: avoid; }
+  #print-report th { width: 26%; }
+  #print-report td, #print-report th { padding: 3px 6px; border-bottom: 1px solid #ccc; text-align: left; vertical-align: top; }
+  #print-report .big { font-size: 20px; font-weight: 700; margin: 4px 0; }
+  #print-report .rpt-logo { display: block; width: 340px; max-width: 70%; height: auto; margin: 0 0 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #print-report ul { margin: 4px 0 0 16px; }
+  #print-report .tag { border: 1px solid #555; padding: 0 4px; font-size: 9px; }
+  #print-report section { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<a class="sr-only" href="#results">Skip to results</a>
+<header class="header">
+  <div class="brand">
+    <img class="brand-icon" src="assets/r2c-icon.svg" width="30" height="30" alt="Rack2Cloud">
+    <div>
+      <div class="header-title">Rack2Cloud</div>
+      <div class="header-sub">Stack Economics</div>
+    </div>
+  </div>
+  <div class="header-badge">Data Protection</div>
+</header>
+
+<div class="page-wrap">
+  <section class="hero">
+    <div class="hero-eyebrow">Platform and Protection Cost, Annualized</div>
+    <h1>Rubrik <span class="word-green">Virtual Stack</span> TCO Calculator</h1>
+    <p class="hero-desc">Compare platform licensing and Rubrik protection costs on one annualized line. Enter your quoted rates, inspect every assumption, and see what the estimate includes.</p>
+    <div class="hero-meta">
+      <div><span class="ck">&#10003;</span>Deterministic. Not AI-generated.</div>
+      <div><span class="ck">&#10003;</span>No rate is prefilled from a price list.</div>
+      <div><span class="ck">&#10003;</span>Calculations run in your browser; inputs are never transmitted.</div>
+    </div>
+  </section>
+
+  <main class="app" id="main">
+    <div class="layout">
+      <div class="inputs">
+        <div class="errs" id="errs" role="alert" hidden></div>
+        <div id="form"></div>
+        <aside class="notmodeled" aria-labelledby="nm-t">
+          <div class="nm-t" id="nm-t">Not modeled in this version</div>
+          <p>Growth over a contract term, Scale Review and Capacity Burst triggers, Utility reserve versus on-demand billing, edition entitlements and workload classes are not calculated here. A contract-exposure analysis covering them is planned. This page does not provide it yet.</p>
+        </aside>
+      </div>
+
+      <section class="results-panel" id="results" aria-label="Result" tabindex="-1">
+        <div id="rp"></div>
+      </section>
+    </div>
+
+    <button type="button" class="mbar" id="mbar" aria-label="Go to the full result"><span class="m-amt" id="mbar-amt"></span><span class="m-st" id="mbar-st"></span></button>
+
+    <div class="cta-block">
+      <div class="section-label">Recovery Readiness: Next Steps</div>
+      <h3>The calculator annualizes the stack you describe.<br>A review tests it against the quote you hold.</h3>
+      <p class="hint">The calculator uses your rates and stated assumptions. It does not review or validate your quote. An architecture review is a separate engagement that checks the licensing metric, the counting rules and the contract terms behind the quote.</p>
+      <div class="cta-cols">
+        <div>
+          <div class="k">&gt;_ Architectural Guidance</div>
+          <h4>Infrastructure Architecture Review</h4>
+          <p>Your quote, protected workloads and platform plan reviewed against this estimate.</p>
+          <a class="r2c-btn" href="https://www.rack2cloud.com/work-with-me/">&gt;_ Request Architecture Review</a>
+        </div>
+        <div>
+          <div class="k dimk">&gt;_ The Dispatch</div>
+          <h4>Architecture Playbooks. Field-Tested Blueprints.</h4>
+          <p>Failure-mode playbooks for backup, immutability and recovery design.</p>
+          <a class="r2c-btn" href="https://www.rack2cloud.com/architecture-failure-playbooks/">[+] Get the Playbooks</a>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="tool-footer">
+  &#128274; No cookies. No tracking. Calculations run in your browser; inputs are never transmitted. &nbsp;|&nbsp;
+  <a href="https://www.rack2cloud.com/rubrik-virtual-stack-tco-calculator/">About this calculator</a>
+  &nbsp;|&nbsp;
+  <a href="https://www.rack2cloud.com/engineering-workbench/disaster-recovery-readiness/">Disaster Recovery Readiness Toolkit</a>
+  &nbsp;|&nbsp;
+  <a href="https://www.rack2cloud.com/">rack2cloud.com</a>
+</div>
+
+<div id="print-report" aria-hidden="true"><img class="rpt-logo" src="assets/r2c-logo.jpg" width="1024" height="341" alt="Rack2Cloud"><div id="rpt-body"></div></div>
+<div class="sr-only" role="status" aria-live="polite" id="live"></div>
+
+<script>'use strict';
+// Rubrik Virtual Stack TCO Calculator, Phase 1 engine. Pure functions, no DOM, no I/O.
+// Design rules (Phase 1):
+//  - Platform licensing and Rubrik protection are separate models. A platform choice never decides a Rubrik metric.
+//  - No vendor price is embedded. Every rate is user-supplied; the "illustrative example" values are round sample numbers.
+//  - A missing value is never shown as zero. A line is either computed, or reports what it still needs.
+//  - Rubrik capacity is a MODELED quantity until the user confirms the metric in their order.
+
+const RATE_UNITS = { perTBYear: 'per TB per year', perTBMonth: 'per TB per month' };
+const GUIDE = 'Rubrik Licensing Guide (v10152026), effective October 15, 2026';
+
+const isNum = v => typeof v === 'number' && isFinite(v);
+const pos = v => isNum(v) && v > 0;
+const evenUp = n => Math.ceil(n / 2) * 2;
+
+function defaults() {
+  return {
+    platform: 'vmware',
+    hosts: 3, cpusPerHost: 2, coresPerCpu: 16,
+    vmwareEdition: 'VVF', nutanixTier: 'Pro',
+    // rate: number|null. status: 'entered'|'illustrative' (only meaningful when the rate is non-null)
+    rates: { vmware: { VVF: null, VCF: null }, nutanix: { Pro: null, Ultimate: null }, hyperv: { pack16: null } },
+    rateStatus: { vmware: { VVF: 'entered', VCF: 'entered' }, nutanix: { Pro: 'entered', Ultimate: 'entered' }, hyperv: { pack16: 'entered' } },
+    amortYears: 3, amortStatus: 'illustrative',
+    // Host, CPU and core counts start as sample values. 'entered' once the user edits any of them.
+    configStatus: 'illustrative',
+    rubrik: { metric: null, metricConfirmed: false, frontEndTB: null, reductionRatio: null, rate: null, rateUnit: 'perTBYear', rateStatus: 'entered' }
+  };
+}
+
+// Round sample values. Deliberately not real price points, so they cannot be mistaken for a quote or a list price.
+function illustrative() {
+  const s = defaults();
+  s.rates = { vmware: { VVF: 100, VCF: 300 }, nutanix: { Pro: 150, Ultimate: 250 }, hyperv: { pack16: 6000 } };
+  for (const g of Object.keys(s.rateStatus)) for (const k of Object.keys(s.rateStatus[g])) s.rateStatus[g][k] = 'illustrative';
+  s.rubrik = { metric: 'FETB', metricConfirmed: false, frontEndTB: 30, reductionRatio: null, rate: 1000, rateUnit: 'perTBYear', rateStatus: 'illustrative' };
+  return s;
+}
+
+function validate(i) {
+  const errs = [];
+  for (const [k, label] of [['hosts', 'Hosts'], ['cpusPerHost', 'CPUs per host'], ['coresPerCpu', 'Cores per CPU']])
+    if (!(Number.isInteger(i[k]) && i[k] >= 1)) errs.push({ field: k, msg: label + ' must be a whole number of 1 or more.' });
+  if (i.platform === 'hyperv' && !(isNum(i.amortYears) && i.amortYears >= 1 && i.amortYears <= 10)) errs.push({ field: 'amortYears', msg: 'Amortization must be between 1 and 10 years.' });
+  const r = i.rubrik;
+  if (r.frontEndTB !== null && !pos(r.frontEndTB)) errs.push({ field: 'frontEndTB', msg: 'Protected front-end capacity must be greater than 0 TB.' });
+  if (r.reductionRatio !== null && !pos(r.reductionRatio)) errs.push({ field: 'reductionRatio', msg: 'Reduction ratio must be greater than 0.' });
+  if (r.rate !== null && !(isNum(r.rate) && r.rate >= 0)) errs.push({ field: 'rubrikRate', msg: 'Rubrik rate cannot be negative.' });
+  return errs;
+}
+
+function currentRate(i) {
+  if (i.platform === 'vmware') return { v: i.rates.vmware[i.vmwareEdition], st: i.rateStatus.vmware[i.vmwareEdition] };
+  if (i.platform === 'nutanix') return { v: i.rates.nutanix[i.nutanixTier], st: i.rateStatus.nutanix[i.nutanixTier] };
+  return { v: i.rates.hyperv.pack16, st: i.rateStatus.hyperv.pack16 };
+}
+
+// ---- platform model ----
+function platformModel(i) {
+  const hosts = i.hosts, cpus = i.cpusPerHost, cpc = i.coresPerCpu;
+  const physical = hosts * cpus * cpc;
+  let licensable, unit, floor, kind, label;
+  if (i.platform === 'vmware') {
+    licensable = hosts * cpus * Math.max(16, cpc);
+    unit = 'cores'; kind = 'subscription'; label = 'VMware ' + i.vmwareEdition;
+    floor = '16-core-per-CPU minimum applied (carried over from the previous version). Order minimums may also apply; check them against your quote.';
+  } else if (i.platform === 'nutanix') {
+    licensable = physical;
+    unit = 'cores'; kind = 'subscription'; label = 'Nutanix NCI ' + i.nutanixTier;
+    floor = 'No per-CPU floor is modeled. Check your quote for minimums.';
+  } else {
+    const perHost = evenUp(Math.max(16, cpus * Math.max(8, cpc)));
+    licensable = perHost * hosts;
+    unit = 'cores'; kind = 'amortized-perpetual'; label = 'Hyper-V Windows Server Datacenter';
+    floor = 'Windows Server core rules modeled: 8-core minimum per processor, 16-core minimum per server, licensed in 2-core steps. Check them against your agreement.';
+  }
+  const { v: rate, st } = currentRate(i);
+  const out = { label, unit, kind, physicalCores: physical, licensableCores: licensable, floorNote: floor, floorAdds: licensable - physical, rate, rateStatus: st, missing: [], annual: null, perpetualTotal: null, amortYears: null, flags: [] };
+  if (!pos(rate)) { out.missing.push(i.platform === 'hyperv' ? 'Datacenter 16-core pack price' : 'rate per core per year'); return out; }
+  if (i.platform === 'hyperv') {
+    out.perpetualTotal = licensable * (rate / 16);
+    out.amortYears = i.amortYears;
+    out.annual = out.perpetualTotal / i.amortYears;
+    if (i.amortStatus === 'illustrative') out.flags.push('illustrative');
+  } else out.annual = licensable * rate;
+  if (st === 'illustrative') out.flags.push('illustrative');
+  if (i.configStatus === 'illustrative') out.flags.push('illustrative-config');
+  out.flags = [...new Set(out.flags)];
+  return out;
+}
+
+// ---- Rubrik protection model ----
+function rubrikModel(i) {
+  const r = i.rubrik, out = { metric: r.metric, qty: null, qtyUnit: null, annual: null, annualRate: null, missing: [], flags: [], reductionUsed: null, warnings: [] };
+  if (!r.metric) out.missing.push('licensing metric (FETB or BETB)');
+  if (!pos(r.frontEndTB)) out.missing.push('protected front-end capacity (TB)');
+  if (r.metric === 'BETB' && !pos(r.reductionRatio)) out.missing.push('modeled reduction ratio');
+  if (!(isNum(r.rate) && r.rate > 0)) out.missing.push('quoted rate');
+  if (pos(r.frontEndTB) && r.metric) {
+    if (r.metric === 'FETB') { out.qty = r.frontEndTB; out.qtyUnit = 'FETB'; }
+    else if (pos(r.reductionRatio)) { out.qty = r.frontEndTB / r.reductionRatio; out.qtyUnit = 'BETB'; out.reductionUsed = r.reductionRatio; if (r.reductionRatio < 1) out.warnings.push('Reduction ratio is below 1: the back-end quantity is larger than the front end. Check the value.'); }
+  }
+  if (out.missing.length === 0) {
+    out.annualRate = r.rateUnit === 'perTBMonth' ? r.rate * 12 : r.rate;
+    out.annual = out.qty * out.annualRate;
+  }
+  if (r.metric && !r.metricConfirmed) out.flags.push('needs-confirmation');
+  if (r.rate !== null && r.rateStatus === 'illustrative') out.flags.push('illustrative');
+  return out;
+}
+
+function compute(i) {
+  const errors = validate(i);
+  const bad = new Set(errors.map(e => e.field));
+  const platformOk = !['hosts', 'cpusPerHost', 'coresPerCpu', 'amortYears'].some(f => bad.has(f));
+  const platform = platformOk ? platformModel(i) : null;
+  const rubrik = ['frontEndTB', 'reductionRatio', 'rubrikRate'].some(f => bad.has(f)) ? null : rubrikModel(i);
+  const p = platform && platform.annual !== null ? platform.annual : null, r = rubrik && rubrik.annual !== null ? rubrik.annual : null;
+  let kind = 'incomplete', amount = null;
+  if (p !== null && r !== null) { kind = 'complete'; amount = p + r; }
+  else if (p !== null) { kind = 'partial-platform'; amount = p; }
+  else if (r !== null) { kind = 'partial-rubrik'; amount = r; }
+  const flags = [...new Set([...(platform ? platform.flags : []), ...(rubrik ? rubrik.flags : [])])];
+  return { errors, platform, rubrik, total: { kind, amount, flags } };
+}
+
+const EXCLUSIONS = [
+  'Hardware and appliances, including Rubrik-branded hardware',
+  'Customer Resilience Manager and support bundles',
+  'Add-on products: Rubrik Cloud Vault, Universal Cloud License, SaaS, identity and other add-ons',
+  'Capacity growth, Scale Reviews, Capacity Burst events and Utility on-demand charges',
+  'Edition entitlements and workload-specific counting rules',
+  'Discounts, taxes, services and training'
+];
+
+const fmt = n => n === null || n === undefined ? 'n/a' : '$' + Math.round(n).toLocaleString('en-US');
+const fmtN = (n, d) => n === null || n === undefined ? 'n/a' : Number(n).toLocaleString('en-US', { maximumFractionDigits: d === undefined ? 1 : d });
+
+// UI for the Rubrik Virtual Stack TCO Calculator, Phase 1. Live recalculation: every input event recomputes.
+// No network, storage or cookie APIs are used anywhere in this file.
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let S = defaults();
+let lastResult = null;
+
+const CHIP = {
+  entered: ['&#10003;', 'Entered by you', 'entered'],
+  illus: ['&#9680;', 'Illustrative', 'illus'],
+  conf: ['?', 'Needs confirmation', 'conf'],
+  req: ['!', 'Required', 'req']
+};
+const chip = (k, label) => `<span class="chip ${CHIP[k][2]}"><i aria-hidden="true">${CHIP[k][0]}</i>${esc(label || CHIP[k][1])}</span>`;
+const flagChip = f => f === 'illustrative' ? chip('illus') : f === 'illustrative-config' ? chip('illus', 'Illustrative configuration') : f === 'needs-confirmation' ? chip('conf') : '';
+const FLAG_TEXT = { 'illustrative': 'Illustrative', 'illustrative-config': 'Illustrative configuration (host, CPU and core counts not edited)', 'needs-confirmation': 'Needs confirmation' };
+
+const PLAT = { vmware: 'VMware', nutanix: 'Nutanix', hyperv: 'Hyper-V' };
+const val = v => v === null || v === undefined || (typeof v === 'number' && isNaN(v)) ? '' : v;
+const read = el => el.value.trim() === '' ? null : Number(el.value);
+const readStruct = el => el.value.trim() === '' ? NaN : Number(el.value);
+
+function rateField() {
+  if (S.platform === 'vmware') return { label: `VMware ${S.vmwareEdition} rate, per core per year`, value: S.rates.vmware[S.vmwareEdition], status: S.rateStatus.vmware[S.vmwareEdition] };
+  if (S.platform === 'nutanix') return { label: `Nutanix NCI ${S.nutanixTier} rate, per core per year`, value: S.rates.nutanix[S.nutanixTier], status: S.rateStatus.nutanix[S.nutanixTier] };
+  return { label: 'Windows Server Datacenter 16-core pack price (one-time)', value: S.rates.hyperv.pack16, status: S.rateStatus.hyperv.pack16 };
+}
+function setRate(v) {
+  if (S.platform === 'vmware') { S.rates.vmware[S.vmwareEdition] = v; S.rateStatus.vmware[S.vmwareEdition] = 'entered'; }
+  else if (S.platform === 'nutanix') { S.rates.nutanix[S.nutanixTier] = v; S.rateStatus.nutanix[S.nutanixTier] = 'entered'; }
+  else { S.rates.hyperv.pack16 = v; S.rateStatus.hyperv.pack16 = 'entered'; }
+}
+
+const tog = (act, v, label, pressed) => `<button type="button" class="toggle-btn" data-act="${act}" data-v="${v}" aria-pressed="${pressed}">${label}</button>`;
+
+function renderForm() {
+  const rf = rateField(), r = S.rubrik;
+  const sub = S.platform === 'vmware' ? `<div class="toggle-group" role="group" aria-label="VMware edition">${tog('edition', 'VVF', 'VVF', S.vmwareEdition === 'VVF')}${tog('edition', 'VCF', 'VCF', S.vmwareEdition === 'VCF')}</div>`
+    : S.platform === 'nutanix' ? `<div class="toggle-group" role="group" aria-label="Nutanix tier">${tog('tier', 'Pro', 'NCI Pro', S.nutanixTier === 'Pro')}${tog('tier', 'Ultimate', 'NCI Ultimate', S.nutanixTier === 'Ultimate')}</div>` : '';
+  const amort = S.platform === 'hyperv' ? `<div class="field" id="fld-amortYears"><label for="f-amort">Amortization period, years ${chip(S.amortStatus === 'illustrative' ? 'illus' : 'entered')}</label><input id="f-amort" type="number" min="1" max="10" step="1" inputmode="numeric" value="${val(S.amortYears)}"><div class="hint">Spreads the one-time price over this period. The result is an amortized figure, not a subscription cost.</div></div>` : '';
+  $('form').innerHTML = `
+  <div class="card-actions">
+    <button type="button" class="action-btn" data-act="example">Load illustrative example</button>
+    <button type="button" class="link-btn" data-act="clear">Clear rates and Rubrik inputs</button>
+  </div>
+  <section class="card" aria-labelledby="h-platform">
+    <div class="section-label" id="h-platform">Platform licensing</div>
+    <div class="toggle-group" role="group" aria-label="Platform">${['vmware', 'nutanix', 'hyperv'].map(p => tog('platform', p, PLAT[p], S.platform === p)).join('')}</div>
+    ${sub}
+    <div class="grid3">
+      <div class="field" id="fld-hosts"><label for="f-hosts">Hosts</label><input id="f-hosts" type="number" min="1" step="1" inputmode="numeric" value="${val(S.hosts)}"></div>
+      <div class="field" id="fld-cpusPerHost"><label for="f-cpus">CPUs per host</label><input id="f-cpus" type="number" min="1" step="1" inputmode="numeric" value="${val(S.cpusPerHost)}"></div>
+      <div class="field" id="fld-coresPerCpu"><label for="f-cores">Cores per CPU</label><input id="f-cores" type="number" min="1" step="1" inputmode="numeric" value="${val(S.coresPerCpu)}"></div>
+    </div>
+    <div class="field" id="fld-rate"><label for="f-rate">${esc(rf.label)} <span id="chip-rate"></span></label><input id="f-rate" type="number" min="0" step="any" inputmode="decimal" value="${val(rf.value)}" placeholder="Enter your rate"><div class="hint">Use the rate from your quote or agreement. Nothing is prefilled from a price list.</div></div>
+    ${amort}
+    <div class="derived" id="derived-platform"></div>
+  </section>
+  <section class="card" aria-labelledby="h-rubrik">
+    <div class="section-label" id="h-rubrik">Rubrik protection</div>
+    <div class="flabel hint mb12">Licensing metric in your order <span id="chip-metric"></span></div>
+    <div class="toggle-group" role="group" aria-label="Rubrik licensing metric">${tog('metric', 'FETB', 'FETB: front-end', r.metric === 'FETB')}${tog('metric', 'BETB', 'BETB: back-end', r.metric === 'BETB')}</div>
+    <label class="check"><input type="checkbox" id="f-confirm" ${r.metricConfirmed ? 'checked' : ''}><span>My order or quote states this metric</span></label>
+    <div class="hint mb12">Platform choice does not set the metric. The licensing guide's default for Rubrik Scale on-premises workloads is BETB, with FETB on-premises by approval, and for cloud workloads FETB (Rubrik Licensing Guide v10152026, p. 10). Your order governs.</div>
+    <div class="grid2">
+      <div class="field" id="fld-frontEndTB"><label for="f-fetb">Protected front-end capacity, TB</label><input id="f-fetb" type="number" min="0" step="any" inputmode="decimal" value="${val(r.frontEndTB)}" placeholder="TB of source data"></div>
+      ${r.metric === 'BETB' ? `<div class="field" id="fld-reductionRatio"><label for="f-ratio">Modeled reduction ratio, front-end : back-end</label><input id="f-ratio" type="number" min="0" step="any" inputmode="decimal" value="${val(r.reductionRatio)}" placeholder="e.g. 3 for 3:1"></div>` : '<div></div>'}
+    </div>
+    ${r.metric === 'BETB' ? '<div class="hint mb12">A modeled assumption, not a contract term. A license conversion of 1 BETB to 1 FETB between on-premises and cloud (guide p. 11) is a different thing from a data-reduction ratio.</div>' : ''}
+    <div class="field" id="fld-rubrikRate"><label for="f-rrate">Quoted Rubrik rate <span id="chip-rrate"></span></label>
+      <div class="inline"><input id="f-rrate" type="number" min="0" step="any" inputmode="decimal" value="${val(r.rate)}" placeholder="Enter your rate"><select id="f-runit" aria-label="Rate unit"><option value="perTBYear" ${r.rateUnit === 'perTBYear' ? 'selected' : ''}>per TB per year</option><option value="perTBMonth" ${r.rateUnit === 'perTBMonth' ? 'selected' : ''}>per TB per month</option></select></div>
+      <div class="hint">The rate applies to the metric you selected.</div></div>
+    <div class="derived" id="derived-rubrik"></div>
+  </section>`;
+}
+
+function renderDerived(R) {
+  const rf = rateField();
+  $('chip-rate').innerHTML = rf.value === null || !(rf.value > 0) ? chip('req') : chip(rf.status === 'illustrative' ? 'illus' : 'entered');
+  $('chip-rrate').innerHTML = S.rubrik.rate === null || !(S.rubrik.rate > 0) ? chip('req') : chip(S.rubrik.rateStatus === 'illustrative' ? 'illus' : 'entered');
+  $('chip-metric').innerHTML = !S.rubrik.metric ? chip('req') : S.rubrik.metricConfirmed ? chip('entered', 'Confirmed by you') : chip('conf');
+  const p = R.platform;
+  const cfg = S.configStatus === 'illustrative' ? chip('illus', 'Illustrative sample configuration') : chip('entered', 'Configuration entered by you');
+  $('derived-platform').innerHTML = p ? `Physical cores <b>${fmtN(p.physicalCores, 0)}</b> &rarr; licensable <b>${fmtN(p.licensableCores, 0)}</b>${p.floorAdds > 0 ? ` <span class="adds">(+${fmtN(p.floorAdds, 0)} from the platform floor)</span>` : ''}<br>${esc(p.floorNote)}<div class="cfgrow">${cfg}</div>` : 'Fix the highlighted platform inputs to see licensable cores.';
+  const q = R.rubrik;
+  $('derived-rubrik').innerHTML = rubrikDerived(R);
+  const errs = R.errors;
+  $('errs').hidden = errs.length === 0; $('errs').innerHTML = errs.length ? '<ul>' + errs.map(e => `<li>${esc(e.msg)}</li>`).join('') + '</ul>' : '';
+  document.querySelectorAll('.field.invalid').forEach(f => f.classList.remove('invalid'));
+  errs.forEach(e => { const f = $('fld-' + e.field); if (f) f.classList.add('invalid'); });
+}
+
+function rubrikDerived(R) {
+  const r = S.rubrik, q = R.rubrik;
+  const prov = r.metric && !r.metricConfirmed ? '<br><b class="prov">Provisional:</b> the metric is not confirmed in your order, so this is not a billing figure.' : '';
+  if (!r.metric) return 'Choose a metric and enter protected capacity to see the modeled quantity.';
+  if (r.metric === 'FETB') {
+    return (q && q.qty !== null ? `Your rate applies to the protected front-end capacity: modeled quantity <b>${fmtN(q.qty, 2)} FETB</b>.` : 'Your rate applies to the protected front-end capacity. Enter that capacity to see the modeled quantity.') + prov;
+  }
+  if (!(r.reductionRatio > 0)) return 'Your rate applies to modeled back-end capacity, which is front-end capacity divided by a reduction ratio. <b>Enter a reduction ratio to calculate it.</b> The ratio is your assumption, not a Rubrik figure.' + prov;
+  return (q && q.qty !== null ? `Your rate applies to modeled back-end capacity: ${fmtN(r.frontEndTB, 2)} TB front-end &divide; ${fmtN(r.reductionRatio, 2)} = <b>${fmtN(q.qty, 2)} BETB</b>.` : 'Enter protected front-end capacity to see the modeled back-end quantity.') + '<br>The ratio is your assumption, not a Rubrik figure.' + prov;
+}
+
+function bridgeHTML(R) {
+  const r = S.rubrik, q = R.rubrik;
+  const fe = r.frontEndTB > 0 ? r.frontEndTB : null;
+  const ratio = r.reductionRatio;
+  const haveRatio = ratio > 0;
+  const feBilled = r.metric === 'FETB', beBilled = r.metric === 'BETB';
+  const beQty = fe && haveRatio ? fe / ratio : null;
+  const beW = haveRatio ? Math.max(4, Math.min(100, 100 / ratio)) : 100;
+  const label = !fe ? 'Enter protected front-end capacity to draw the bridge.' : !r.metric ? 'Choose a licensing metric to mark the modeled quantity.' : '';
+  const ratioTxt = haveRatio ? `Modeled reduction ratio ${fmtN(ratio, 2)}:1. An assumption, not a contract term.` : (beBilled ? 'Reduction ratio required for BETB.' : 'Reduction ratio not entered. It only matters if the order is metered in BETB.');
+  const aria = `Front-end capacity ${fe ? fmtN(fe, 2) + ' TB' : 'not entered'}. Back-end capacity ${beQty ? fmtN(beQty, 2) + ' TB modeled' : 'not modeled'}. ${r.metric ? 'Modeled quantity is on the ' + r.metric + ' side.' : 'No metric chosen.'}`;
+  return `<div class="bridge" role="img" aria-label="${esc(aria)}">
+    <div class="bt">Metric bridge: where the modeled quantity sits</div>
+    <div class="br-row"><span class="br-k">FETB</span><div class="br-track"><div class="br-bar full ${feBilled ? 'billed' : ''} ${fe ? '' : 'pending'}"></div></div><span class="br-v ${fe ? '' : 'na'}">${fe ? fmtN(fe, 2) + ' TB' : 'needed'}</span></div>
+    <div class="br-mid"><span></span><div class="br-ratio">${esc(ratioTxt)}</div></div>
+    <div class="br-row"><span class="br-k">BETB</span><div class="br-track"><div class="br-bar ${beBilled ? 'billed' : ''} ${fe && haveRatio ? '' : 'pending'}" data-w="${beW}"></div></div><span class="br-v ${beQty ? '' : 'na'}">${beQty ? fmtN(beQty, 2) + ' TB' : 'needed'}</span></div>
+    <div class="br-note">${esc(label)}${label ? ' ' : ''}Highlighted bar: the quantity the selected metric would be applied to. Modeled, not billed.</div>
+  </div>`;
+}
+
+function lineChips(p) {
+  const f = p.flags.map(flagChip).join('');
+  if (p.missing.length) return chip('req') + f;
+  return f || chip('entered');
+}
+
+function renderResults(R) {
+  const t = R.total, p = R.platform, q = R.rubrik;
+  let head;
+  const fl = t.flags.map(flagChip).join('');
+  const prov = t.flags.includes('needs-confirmation');
+  if (t.kind === 'complete') head = `<div class="total complete ${prov ? 'prov' : ''}"><div class="tl">Annualized stack total${prov ? ', provisional' : ''}</div><div class="tv">${fmt(t.amount)}</div><div class="ts">Platform plus Rubrik, per year. Excludes the items listed below.${prov ? ' Provisional: the Rubrik metric is not confirmed in your order.' : ''}</div><div class="chips">${fl}</div></div>`;
+  else if (t.kind === 'incomplete') head = `<div class="total empty"><div class="tl">No total yet</div><div class="tv">Enter your rates to begin.</div><div class="ts">Each model needs its own inputs. A missing value is never counted as zero. <button type="button" class="link-btn" data-act="example">Load illustrative example</button></div></div>`;
+  else {
+    const which = t.kind === 'partial-platform' ? 'platform only' : 'Rubrik only';
+    const need = t.kind === 'partial-platform' ? (q ? q.missing : ['Rubrik inputs']) : (p ? p.missing : ['platform inputs']);
+    head = `<div class="total partial"><div class="tl">Partial total: ${which}${prov ? ', provisional' : ''}</div><div class="tv">${fmt(t.amount)}</div><div class="ts">${t.kind === 'partial-platform' ? 'Rubrik' : 'Platform'} is not included. Still needed: ${esc(need.join(', '))}.</div><div class="chips">${fl}</div></div>`;
+  }
+  let pl = '';
+  if (p) {
+    pl = `<div class="line"><div class="lh"><span class="lt">${esc(p.label)}</span>${p.annual !== null ? `<span class="la">${fmt(p.annual)}/yr</span>` : '<span class="la na">no figure yet</span>'}</div>
+      <div class="lm">${fmtN(p.licensableCores, 0)} licensable cores from ${fmtN(p.physicalCores, 0)} physical${p.kind === 'amortized-perpetual' && p.perpetualTotal !== null ? `<br>One-time ${fmt(p.perpetualTotal)} spread over ${p.amortYears} years (amortized, not a subscription)` : p.kind === 'subscription' && p.annual !== null ? '<br>Subscription, per year' : ''}${p.missing.length ? `<br><span class="need">Needs: ${esc(p.missing.join(', '))}</span>` : ''}</div>
+      <div class="chips">${lineChips(p)}</div></div>`;
+  } else pl = '<div class="line"><div class="lh"><span class="lt">Platform</span><span class="la na">fix inputs</span></div></div>';
+  let rl = '';
+  if (q) {
+    rl = `<div class="line"><div class="lh"><span class="lt">Rubrik protection</span>${q.annual !== null ? `<span class="la">${fmt(q.annual)}/yr</span>` : '<span class="la na">no figure yet</span>'}</div>
+      <div class="lm">${q.qty !== null ? `Modeled quantity ${fmtN(q.qty, 2)} ${q.qtyUnit}${q.annual !== null ? ` at ${fmt(q.annualRate)} per TB per year` : ''}` : 'No quantity yet'}${q.warnings.length ? `<br><span class="warn">${esc(q.warnings[0])}</span>` : ''}${q.missing.length ? `<br><span class="need">Needs: ${esc(q.missing.join(', '))}</span>` : ''}</div>
+      <div class="chips">${q.missing.length ? chip('req') : ''}${q.flags.map(flagChip).join('')}${!q.missing.length && !q.flags.length ? chip('entered') : ''}</div></div>`;
+  } else rl = '<div class="line"><div class="lh"><span class="lt">Rubrik protection</span><span class="la na">fix inputs</span></div></div>';
+  $('rp').innerHTML = head + pl + rl + bridgeHTML(R) +
+    `<details class="excl"><summary>What this estimate excludes</summary><ul>${EXCLUSIONS.map(e => `<li>${esc(e)}</li>`).join('')}</ul></details>
+     <div class="hint">Rates are the ones you entered. This is a calculation, not a quote.</div>
+     <div class="action-row"><button type="button" class="action-btn" data-act="copy" id="btn-copy">Copy results</button><button type="button" class="action-btn secondary" data-act="print">Print / Save PDF</button></div>`;
+  // Bar widths are set through the DOM: the CSP forbids inline style attributes.
+  $('rp').querySelectorAll('[data-w]').forEach(el => { el.style.width = el.dataset.w + '%'; });
+  const summary = t.kind === 'incomplete' ? 'No total yet' : (t.kind === 'complete' ? 'Annualized stack total ' : 'Partial total ') + fmt(t.amount);
+  $('mbar-amt').textContent = t.amount === null ? 'No total yet' : fmt(t.amount);
+  $('mbar-st').textContent = t.kind === 'complete' ? (prov ? 'Provisional' : 'Annualized') : t.kind === 'incomplete' ? 'Enter rates' : 'Partial';
+  $('live').textContent = summary;
+}
+
+function statusText(flags, missing) { return missing && missing.length ? 'Required: ' + missing.join(', ') : (flags.length ? flags.map(f => FLAG_TEXT[f] || f).join('; ') : 'Entered by you'); }
+
+function summaryText(R) {
+  const t = R.total, p = R.platform, q = R.rubrik, r = S.rubrik, L = [];
+  L.push('Rubrik Virtual Stack TCO Calculator (rack2cloud.com)');
+  if (t.flags.includes('needs-confirmation')) L.push('PROVISIONAL: the Rubrik licensing metric is not confirmed in the order.');
+  L.push((t.kind === 'complete' ? 'Annualized stack total: ' : t.kind === 'incomplete' ? 'No total yet' : 'Partial total (' + (t.kind === 'partial-platform' ? 'platform only' : 'Rubrik only') + '): ') + (t.amount === null ? '' : fmt(t.amount)));
+  if (p) L.push(`Platform: ${p.label}; ${S.hosts} hosts x ${S.cpusPerHost} CPUs x ${S.coresPerCpu} cores (${S.configStatus === 'illustrative' ? 'illustrative sample configuration' : 'entered by you'}); rate ${p.rate === null ? 'not entered' : fmtN(p.rate, 2) + (S.platform === 'hyperv' ? ' per 16-core pack, one-time' : ' per core per year')}; ${fmtN(p.licensableCores, 0)} licensable cores; ${p.annual === null ? 'no figure yet' : fmt(p.annual) + ' per year' + (p.kind === 'amortized-perpetual' ? ` (one-time ${fmt(p.perpetualTotal)} amortized over ${p.amortYears} years)` : '')} [${statusText(p.flags, p.missing)}]`);
+  if (q) L.push(`Rubrik: metric ${r.metric || 'not chosen'}; protected front-end ${r.frontEndTB === null ? 'not entered' : r.frontEndTB + ' TB'}${r.metric === 'BETB' && r.reductionRatio ? '; modeled reduction ratio ' + r.reductionRatio + ':1' : ''}; modeled quantity ${q.qty === null ? 'n/a' : fmtN(q.qty, 2) + ' ' + q.qtyUnit}; ${q.annual === null ? 'no figure yet' : fmt(q.annual) + ' per year at ' + r.rate + ' ' + RATE_UNITS[r.rateUnit]} [${statusText(q.flags, q.missing)}]`);
+  L.push('Status key: Entered by you = your value; Illustrative = sample value, not a price; Illustrative configuration = host, CPU and core counts left at the sample values; Needs confirmation = metric not confirmed in your order; Required = a missing value blocks the figure.');
+  L.push('Excludes: ' + EXCLUSIONS.join('; ') + '.');
+  L.push('Rates are user-supplied. This is a calculation, not a quote.');
+  return L.join('\n');
+}
+
+function printReport(R) {
+  const t = R.total, p = R.platform, q = R.rubrik, r = S.rubrik;
+  const row = (a, b) => `<tr><th>${esc(a)}</th><td>${b}</td></tr>`;
+  $('rpt-body').innerHTML = `<h1>Rubrik Virtual Stack TCO Calculator</h1><div>rack2cloud.com</div>
+  <section><h2>Result</h2>${t.flags.includes('needs-confirmation') ? '<div><b>PROVISIONAL:</b> the Rubrik licensing metric is not confirmed in the order.</div>' : ''}<div class="big">${t.amount === null ? 'No total yet' : fmt(t.amount)}</div><div>${t.kind === 'complete' ? 'Annualized stack total (platform plus Rubrik, per year)' : t.kind === 'incomplete' ? 'Inputs are incomplete. No figure is shown.' : 'Partial total: ' + (t.kind === 'partial-platform' ? 'platform only; Rubrik is not included' : 'Rubrik only; platform is not included')}</div></section>
+  <section><h2>Platform</h2><table>${p ? row('Platform', esc(p.label)) + row('Hosts, CPUs, cores', `${S.hosts} x ${S.cpusPerHost} x ${S.coresPerCpu} (${S.configStatus === 'illustrative' ? 'illustrative sample configuration' : 'entered by you'})`) + row('Licensable cores', fmtN(p.licensableCores, 0) + ' (physical ' + fmtN(p.physicalCores, 0) + ')') + row('Rate', p.rate === null ? 'not entered' : fmtN(p.rate, 2) + (S.platform === 'hyperv' ? ' per 16-core pack, one-time' : ' per core per year')) + (p.perpetualTotal !== null ? row('One-time total', fmt(p.perpetualTotal) + ', amortized over ' + p.amortYears + ' years') : '') + row('Annual', p.annual === null ? 'no figure yet' : fmt(p.annual)) + row('Status', esc(statusText(p.flags, p.missing))) + row('Basis note', esc(p.floorNote)) : row('Platform', 'inputs need correction')}</table></section>
+  <section><h2>Rubrik protection</h2><table>${q ? row('Metric', esc(r.metric || 'not chosen') + (r.metricConfirmed ? ' (confirmed by you in your order)' : ' (not confirmed)')) + row('Protected front-end', r.frontEndTB === null ? 'not entered' : r.frontEndTB + ' TB') + (r.metric === 'BETB' ? row('Modeled reduction ratio', r.reductionRatio ? r.reductionRatio + ':1 (an assumption, not a contract term)' : 'not entered') : '') + row('Modeled quantity', q.qty === null ? 'n/a' : fmtN(q.qty, 2) + ' ' + q.qtyUnit) + row('Rate', r.rate === null ? 'not entered' : r.rate + ' ' + RATE_UNITS[r.rateUnit]) + row('Annual', q.annual === null ? 'no figure yet' : fmt(q.annual)) + row('Status', esc(statusText(q.flags, q.missing))) : row('Rubrik', 'inputs need correction')}</table></section>
+  <section><h2>Status key</h2><ul><li>Entered by you: a value you supplied.</li><li>Illustrative: a sample value, not a price. Illustrative configuration: host, CPU and core counts left at the sample values.</li><li>Needs confirmation: the metric is not confirmed in your order.</li><li>Required: a missing value blocks the figure.</li></ul></section>
+  <section><h2>Excluded from this estimate</h2><ul>${EXCLUSIONS.map(e => `<li>${esc(e)}</li>`).join('')}</ul></section>
+  <section><h2>Basis</h2><p>Rates are the ones you entered. This is a calculation, not a quote. Rubrik licensing terms referenced: ${esc(GUIDE)}.</p></section>`;
+}
+
+function recalc() { const R = compute(S); lastResult = R; renderDerived(R); renderResults(R); }
+
+function keepFocus(sel) { const el = document.querySelector(sel); if (el) el.focus(); }
+
+document.addEventListener('input', e => {
+  const id = e.target.id;
+  if (!id || !id.startsWith('f-')) return;
+  if (id === 'f-hosts') { S.hosts = readStruct(e.target); S.configStatus = 'entered'; }
+  else if (id === 'f-cpus') { S.cpusPerHost = readStruct(e.target); S.configStatus = 'entered'; }
+  else if (id === 'f-cores') { S.coresPerCpu = readStruct(e.target); S.configStatus = 'entered'; }
+  else if (id === 'f-rate') setRate(read(e.target));
+  else if (id === 'f-amort') { S.amortYears = readStruct(e.target); S.amortStatus = 'entered'; }
+  else if (id === 'f-fetb') S.rubrik.frontEndTB = read(e.target);
+  else if (id === 'f-ratio') S.rubrik.reductionRatio = read(e.target);
+  else if (id === 'f-rrate') { S.rubrik.rate = read(e.target); S.rubrik.rateStatus = 'entered'; }
+  else if (id === 'f-runit') S.rubrik.rateUnit = e.target.value;
+  else if (id === 'f-confirm') S.rubrik.metricConfirmed = e.target.checked;
+  else return;
+  recalc();
+});
+
+// Platform configuration survives Load example and Clear: only rates and Rubrik inputs are reset.
+function structural() { return { platform: S.platform, hosts: S.hosts, cpusPerHost: S.cpusPerHost, coresPerCpu: S.coresPerCpu, vmwareEdition: S.vmwareEdition, nutanixTier: S.nutanixTier, configStatus: S.configStatus, amortYears: S.amortYears, amortStatus: S.amortStatus }; }
+
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const act = b.dataset.act, v = b.dataset.v;
+  if (act === 'platform') { S.platform = v; renderForm(); recalc(); keepFocus(`[data-act=platform][data-v=${v}]`); }
+  else if (act === 'edition') { S.vmwareEdition = v; renderForm(); recalc(); keepFocus(`[data-act=edition][data-v=${v}]`); }
+  else if (act === 'tier') { S.nutanixTier = v; renderForm(); recalc(); keepFocus(`[data-act=tier][data-v=${v}]`); }
+  else if (act === 'metric') { S.rubrik.metric = v; renderForm(); recalc(); keepFocus(`[data-act=metric][data-v=${v}]`); }
+  else if (act === 'example') { const s = structural(); S = illustrative(); Object.assign(S, s); renderForm(); recalc(); keepFocus('[data-act=example]'); }
+  else if (act === 'clear') { const s = structural(), d = defaults(); S = Object.assign(d, s); renderForm(); recalc(); keepFocus('[data-act=clear]'); }
+  else if (act === 'copy') {
+    const txt = summaryText(lastResult);
+    try { await navigator.clipboard.writeText(txt); b.textContent = '✓ Copied'; } catch (_) { b.textContent = 'Copy blocked by browser'; }
+    setTimeout(() => { const c = $('btn-copy'); if (c) c.textContent = 'Copy results'; }, 2000);
+  }
+  else if (act === 'print') {
+    printReport(lastResult);
+    // The logo is in the DOM from page load; wait for it to decode so the print preview never shows an empty block.
+    const im = document.querySelector('#print-report .rpt-logo');
+    await Promise.race([im && im.decode ? im.decode().catch(() => {}) : Promise.resolve(), new Promise(r => setTimeout(r, 1500))]);
+    window.print();
+  }
+});
+$('mbar').addEventListener('click', () => { $('results').scrollIntoView(); $('results').focus(); });
+// Hide the mobile bar while the full result is on screen, so it never covers the result it summarizes.
+if ('IntersectionObserver' in window) new IntersectionObserver(en => { $('mbar').classList.toggle('hide', en[0].isIntersecting); }, { threshold: 0.15 }).observe($('results'));
+
+renderForm();
+recalc();
+</script>
+</body>
+</html>
