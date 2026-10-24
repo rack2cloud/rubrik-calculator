@@ -1,0 +1,29 @@
+{
+  "framework": null,
+  "installCommand": null,
+  "buildCommand": null,
+  "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'sha256-xnGUYb+UbEjJPtKd0B4BDX/p41Ot25ub+IA4S4RVh/8='; style-src 'sha256-/Wet/HYkqDSL7WIT2DQNUnjU6spZ8U9inft7aZXtzKc='; connect-src 'none'; font-src 'self'; img-src 'self' data:; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ]
+}

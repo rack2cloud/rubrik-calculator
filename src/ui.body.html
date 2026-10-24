@@ -1,0 +1,75 @@
+<a class="sr-only" href="#results">Skip to results</a>
+<header class="header">
+  <div class="brand">
+    <img class="brand-icon" src="assets/r2c-icon.svg" width="30" height="30" alt="Rack2Cloud">
+    <div>
+      <div class="header-title">Rack2Cloud</div>
+      <div class="header-sub">Virtual Stack TCO</div>
+    </div>
+  </div>
+  <div class="header-badge">Data Protection</div>
+</header>
+
+<div class="page-wrap">
+  <section class="hero">
+    <div class="hero-eyebrow">Stack Economics: Platform and Rubrik Licensing</div>
+    <h1>Rubrik Virtual <span class="word-green">Stack</span> TCO Calculator</h1>
+    <p class="hero-desc">Put platform licensing and Rubrik protection cost on one annualized line. You supply every rate, and each line shows where its numbers came from.</p>
+    <div class="hero-meta">
+      <div><span class="ck">&#10003;</span>Deterministic. Not AI-generated.</div>
+      <div><span class="ck">&#10003;</span>No rate is prefilled from a price list.</div>
+      {{PRIVACY_HERO}}
+    </div>
+  </section>
+
+  <main class="app" id="main">
+    <div class="layout">
+      <div class="inputs">
+        <div class="errs" id="errs" role="alert" hidden></div>
+        <div id="form"></div>
+        <aside class="notmodeled" aria-labelledby="nm-t">
+          <div class="nm-t" id="nm-t">Not modeled in this version</div>
+          <p>Growth over a contract term, Scale Review and Capacity Burst triggers, Utility reserve versus on-demand billing, edition entitlements and workload classes are not calculated here. A contract-exposure analysis covering them is planned. This page does not provide it yet.</p>
+        </aside>
+      </div>
+
+      <section class="results-panel" id="results" aria-label="Result" tabindex="-1">
+        <div id="rp"></div>
+      </section>
+    </div>
+
+    <button type="button" class="mbar" id="mbar" aria-label="Go to the full result"><span class="m-amt" id="mbar-amt"></span><span class="m-st" id="mbar-st"></span></button>
+
+    <div class="cta-block">
+      <div class="section-label">Recovery Readiness: Next Steps</div>
+      <h3>The calculator annualizes the stack you describe.<br>A review tests it against the quote you hold.</h3>
+      <p class="hint">The calculation uses your rates and stated assumptions. A review checks the licensing metric, the counting rules and the contract terms behind them.</p>
+      <div class="cta-cols">
+        <div>
+          <div class="k">&gt;_ Architectural Guidance</div>
+          <h4>Infrastructure Architecture Review</h4>
+          <p>Your quote, protected workloads and platform plan reviewed against this estimate.</p>
+          <a class="r2c-btn" href="https://www.rack2cloud.com/work-with-me/">&gt;_ Request Architecture Review</a>
+        </div>
+        <div>
+          <div class="k dimk">&gt;_ The Dispatch</div>
+          <h4>Architecture Playbooks. Field-Tested Blueprints.</h4>
+          <p>Failure-mode playbooks for backup, immutability and recovery design.</p>
+          <a class="r2c-btn" href="https://www.rack2cloud.com/architecture-failure-playbooks/">[+] Get the Playbooks</a>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="tool-footer">
+  {{PRIVACY_FOOTER}}
+  <a href="https://www.rack2cloud.com/rubrik-virtual-stack-tco-calculator/">About this calculator</a>
+  &nbsp;|&nbsp;
+  <a href="https://www.rack2cloud.com/engineering-workbench/disaster-recovery-readiness/">Disaster Recovery Readiness Toolkit</a>
+  &nbsp;|&nbsp;
+  <a href="https://www.rack2cloud.com/">rack2cloud.com</a>
+</div>
+
+<div id="print-report" aria-hidden="true"></div>
+<div class="sr-only" role="status" aria-live="polite" id="live"></div>
